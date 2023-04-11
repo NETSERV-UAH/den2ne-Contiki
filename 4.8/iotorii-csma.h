@@ -62,8 +62,6 @@ struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA
 };
 
 typedef struct neighbour_table_entry neighbour_table_entry_t;
-//int number_of_neighbours;
-//int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 
 /* just a default - with LLSEC, etc */
 #define CSMA_MAC_MAX_HEADER 21

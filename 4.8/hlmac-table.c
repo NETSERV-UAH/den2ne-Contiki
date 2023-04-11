@@ -16,7 +16,6 @@ LIST(hlmac_table_entry_list);
 
 /*---------------------------------------------------------------------------*/
 
-/*MOVIDO DEL .H POR ERROR DE DEFINICIÓN DOBLE*/
 uint8_t number_of_hlmac_addresses;
 
 void hlmac_table_init(void)

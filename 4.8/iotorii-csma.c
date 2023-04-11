@@ -19,9 +19,6 @@
 #include "net/packetbuf.h"
 #include "net/netstack.h"
 
-#include "net/netstack.h"
-#include "net/ipv6/simple-udp.h"
-
 /* Log configuration */
 
 #include "sys/log.h"
@@ -41,6 +38,7 @@
 #else
 #define IOTORII_HELLO_START_TIME 4 //Default Delay is 2 s
 #endif
+#define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 60 s
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
 //SE IMPRIMER LOS PRIMEROS LOGS DE ESTADÍSTICAS
@@ -90,10 +88,6 @@
 PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) EL SHARE_TIME > 2*LOAD_TIME*/
 
 /*---------------------------------------------------------------------------*/
-
-/*MOVIDO DEL .H POR ERROR AL DEFINIR 2 VECES*/
-int number_of_neighbours;
-int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 
 #if IOTORII_NODE_TYPE == 1 //ROOT
 static struct ctimer sethlmac_timer;
@@ -170,6 +164,11 @@ uint8_t edge_complete_load = 0; //INDICA A 1 QUE SE ACTIVA EN LA SEGUNDA VUELTA 
 /*---------------------------------------------------------------------------*/
 
 static void iotorii_handle_statistic_timer ();
+static void iotorii_handle_sethlmac_timer ();
+clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
+clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
+int number_of_neighbours;
+int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 
 static void init_sec (void)
 {
@@ -463,27 +462,6 @@ static void iotorii_handle_statistic_timer ()
 
 #endif
 
-#define UDP_CLIENT_PORT	8765
-#define UDP_SERVER_PORT	5678
-
-static uint32_t rx_count = 0;
-static void
-udp_rx_callback(struct simple_udp_connection *c,
-         const uip_ipaddr_t *sender_addr,
-         uint16_t sender_port,
-         const uip_ipaddr_t *receiver_addr,
-         uint16_t receiver_port,
-         const uint8_t *data,
-         uint16_t datalen)
-{
-  LOG_INFO("Received response '%.*s' from ", datalen, (char *) data);
-  LOG_INFO_6ADDR(sender_addr);
-#if LLSEC802154_CONF_ENABLED
-  LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
-#endif
-  LOG_INFO_("\n");
-  rx_count++;
-}
 
 static void iotorii_handle_hello_timer ()
 {
@@ -493,11 +471,6 @@ static void iotorii_handle_hello_timer ()
 	   LOG_WARN("output: failed to calculate payload size - Hello can not be created\n");
 	else
 	{
-		static struct simple_udp_connection udp_conn;
-		simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL, UDP_SERVER_PORT, udp_rx_callback);
-		static char str[32];
-		uip_ipaddr_t dest_ipaddr;
-		simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
 		packetbuf_clear(); //HELLO NO TIENE PAYLOAD
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 		LOG_DBG("Hello prepared to send\n");
@@ -508,6 +481,11 @@ static void iotorii_handle_hello_timer ()
 		#endif
 
 		send_packet(NULL, NULL);
+	}
+	if(list_head(neighbour_table_entry_list)== NULL){
+		ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
+	}else{
+		ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 	}
 }
 
@@ -755,6 +733,16 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			LOG_DBG(", ID: %d\n", new_nb->number_id);
 			
 			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
+
+			#if IOTORII_NODE_TYPE == 1 //ROOT
+			//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA (LOS TIMERS SE SOBREESCRIBEN)
+			ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+			#endif
+			#if IOTORII_NODE_TYPE != 1 //ROOT
+			//ENVÍA MENSAJE SETHLMAC EN CASO DE NO SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA
+			//iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address); //SE ENVÍA A LOS DEMÁS NODOS
+			#endif
+			ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
 		}
 		else
 		{
@@ -986,7 +974,7 @@ static void init (void)
 	#endif
 
 	//SE PLANIFICA MENSAJE HELLO
-	clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
+	//clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
 	hello_start_time = hello_start_time / 2 + (random_rand() % (hello_start_time / 2));
 	LOG_DBG("Scheduling a Hello message after %u ticks in the future\n", (unsigned)hello_start_time);
 	ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
@@ -997,14 +985,14 @@ static void init (void)
 	
 	//ESTADÍSTICAS
 	#if LOG_DBG_STATISTIC == 1
-	ctimer_set(&statistic_timer, IOTORII_STATISTICS1_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL);
+	//ctimer_set(&statistic_timer, IOTORII_STATISTICS1_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL);
 	#endif
 	
 	#endif
 
 	#if IOTORII_NODE_TYPE == 1 //ROOT
 	//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT
-	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+	//ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 	#endif
 }
 

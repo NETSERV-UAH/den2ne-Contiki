@@ -17,7 +17,6 @@ struct hlmac_table_entry
 };
 
 typedef struct hlmac_table_entry hlmac_table_entry_t;
-//uint8_t number_of_hlmac_addresses;
 
 
 /*---------------------------------------------------------------------------*/
