@@ -170,6 +170,11 @@ clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
 int number_of_neighbours;
 int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 
+#if IOTORII_NODE_TYPE != 1 //NODO COMUN
+hlmacaddr_t *received_hlmac_addr_def; //PARA QUE LOS NODOS COMUNES ENVÍEN SU HLMAC A LOS NUEVOS NODOS
+linkaddr_t sender_link_address_def; //PARA QUE LOS NODOS COMUNES ENVÍEN SU HLMAC A LOS NUEVOS NODOS
+#endif
+
 static void init_sec (void)
 {
 #if LLSEC802154_USES_AUX_HEADER
@@ -743,6 +748,10 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			//iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address); //SE ENVÍA A LOS DEMÁS NODOS
 			#endif
 			ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
+			#if IOTORII_NODE_TYPE != 1 //NO ROOT
+			if(received_hlmac_addr_def)
+				iotorii_send_sethlmac(*received_hlmac_addr_def, sender_link_address_def); //SE ENVÍA A LOS DEMÁS NODOS
+			#endif
 		}
 		else
 		{
@@ -849,7 +858,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 		printf("//INFO INCOMING HLMAC// HLMAC recibida: %s\n", new_hlmac_addr_str);
 		free(new_hlmac_addr_str);
 
-		if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA EL HIJO
+		if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA AL HIJO
 		{
 			uint8_t is_added = hlmactable_add(*received_hlmac_addr);
 
@@ -858,6 +867,10 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				LOG_DBG("New HLMAC address is assigned to the node.\n");
 				LOG_DBG("New HLMAC address is sent to the neighbours.\n");
 				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address); //SE ENVÍA A LOS DEMÁS NODOS
+				#if IOTORII_NODE_TYPE != 1 //NODO COMÚN
+				received_hlmac_addr_def=received_hlmac_addr;
+				sender_link_address_def=sender_link_address;
+				#endif
 			}
 			else //NO SE HA ASIGNADO
 			{
