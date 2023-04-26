@@ -163,8 +163,10 @@ uint8_t edge_complete_load = 0; //INDICA A 1 QUE SE ACTIVA EN LA SEGUNDA VUELTA 
 
 /*---------------------------------------------------------------------------*/
 
-static void iotorii_handle_statistic_timer ();
+#if IOTORII_NODE_TYPE == 1 //ROOT
 static void iotorii_handle_sethlmac_timer ();
+#endif
+static void iotorii_handle_statistic_timer ();
 clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
 clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
 int number_of_neighbours;
@@ -296,7 +298,8 @@ void iotorii_handle_load_timer ()
 	{
 		packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
 		
-		memcpy(packetbuf_dataptr(), &(node->load), sizeof(&node->load)); //SE COPIA LOAD  
+		//memcpy(packetbuf_dataptr(), &(node->load), sizeof(&node->load)); //SE COPIA LOAD
+		memcpy(packetbuf_dataptr(), &(node->load), sizeof(node->load)); //SE COPIA LOAD  
 		packetbuf_set_datalen(sizeof(&node->load));									
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 
@@ -758,6 +761,7 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			LOG_DBG("Address of hello (");
 			LOG_DBG_LLADDR(sender_addr);
 			LOG_DBG(") message received already!\n");
+			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
 		}
 	}
 	else //TABLA LLENA (256)

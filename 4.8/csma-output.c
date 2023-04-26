@@ -284,7 +284,7 @@ static void free_packet (struct neighbor_queue *n, struct packet_queue *p, int s
 		memb_free(&metadata_memb, p->ptr);
 		memb_free(&packet_memb, p);
 		
-		LOG_DBG("free_queued_packet, queue length %d, free packets %d\n", list_length(n->packet_queue), memb_numfree(&packet_memb));
+		LOG_DBG("free_queued_packet, queue length %d, free packets %ld\n", list_length(n->packet_queue), memb_numfree(&packet_memb));
 			   
 		if (list_head(n->packet_queue) != NULL) //SI HAY SIGUIENTES PAQUETES 
 		{
@@ -483,7 +483,7 @@ void csma_output_packet (mac_callback_t sent, void *ptr)
 
 						LOG_INFO("sending to ");
 						LOG_INFO_LLADDR(addr);
-						LOG_INFO_(", len %u, seqno %u, queue length %d, free packets %d\n", packetbuf_datalen(), packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO), list_length(n->packet_queue), memb_numfree(&packet_memb));	
+						LOG_INFO_(", len %u, seqno %u, queue length %d, free packets %ld\n", packetbuf_datalen(), packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO), list_length(n->packet_queue), memb_numfree(&packet_memb));	
 						
 						if (list_head(n->packet_queue) == q) //SI q ES EL PRIMER PAQUETE EN LA COLA SE MANDA PLANIFICA (ASAP)
 							schedule_transmission(n);
