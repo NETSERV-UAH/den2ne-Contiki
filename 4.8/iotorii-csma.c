@@ -38,7 +38,11 @@
 #else
 #define IOTORII_HELLO_START_TIME 4 //Default Delay is 2 s
 #endif
+#ifdef IOTORII_CONF_HELLO_IDLE_TIME
+#define IOTORII_HELLO_IDLE_TIME IOTORII_CONF_HELLO_IDLE_TIME
+#else
 #define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 60 s
+#endif
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
 //SE IMPRIMER LOS PRIMEROS LOGS DE ESTADÍSTICAS
@@ -46,6 +50,11 @@
 #define IOTORII_SETHLMAC_START_TIME IOTORII_CONF_SETHLMAC_START_TIME
 #else
 #define IOTORII_SETHLMAC_START_TIME 5 //Default Delay is 10 s
+#endif
+#ifdef IOTORII_CONF_SETHLMAC_IDLE_TIME
+#define IOTORII_SETHLMAC_IDLE_TIME IOTORII_CONF_SETHLMAC_IDLE_TIME
+#else
+#define IOTORII_SETHLMAC_IDLE_TIME 30 //Default Delay is 10 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA UN NODO COMÚN HASTA QUE SE ENVÍA MENSAJE SETHLMAC A LOS VECINOS
@@ -171,12 +180,6 @@ clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
 clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
 int number_of_neighbours;
 int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
-
-#if IOTORII_NODE_TYPE != 1 //NODO COMUN
-hlmacaddr_t *received_hlmac_addr_def; //PARA QUE LOS NODOS COMUNES ENVÍEN SU HLMAC A LOS NUEVOS NODOS
-linkaddr_t sender_link_address_def; //PARA QUE LOS NODOS COMUNES ENVÍEN SU HLMAC A LOS NUEVOS NODOS
-#endif
-
 static void init_sec (void)
 {
 #if LLSEC802154_USES_AUX_HEADER
@@ -241,15 +244,18 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 	//SE LEE EL PAYLOAD
 	
 	/* The payload structure:
-	* +------------+--------+-----+------+-----+-----+------+
-	* | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
-	* +------------+--------+-----+------+-----+-----+------+ -------->*/
+	* +-----------+------------+--------+-----+------+-----+-----+------+
+	* | Timestamp | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
+	* +-----------+------------+--------+-----+------+-----+-----+------+ -------->*/
 	
 	while (datalen_counter < packetbuf_data_len && !linkaddr_cmp(&link_address, &linkaddr_node_addr))
 	{
 		if (is_first_record) //SI ES EL PRIMER RECORD DEL PAYLOAD SE INCLUYE EL PREFIJO Y LA LONGITUD DE ESTE
 		{
 			is_first_record = 0;
+			
+			packetbuf_ptr+=sizeof(uint64_t); //SE IGNORA EL CAMPO TIMESTAMP
+			datalen_counter+=sizeof(uint64_t); //SE IGNORA EL CAMPO TIMESTAMP
 			
 			prefix = (hlmacaddr_t*) malloc (sizeof(hlmacaddr_t)); //SE RESERVA MEMORIA PARA EL PREFIJO
 			memcpy(&prefix->len, packetbuf_ptr, 1); //COPIA LONGITUD PREFIJO DEL VECINO
@@ -286,6 +292,28 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 	
 	*prefix = UNSPECIFIED_HLMAC_ADDRESS; //SE "BORRA"
 	return prefix;
+}
+
+uint64_t iotorii_extract_timestamp (void) //SE EXTRAE LA DIRECCIÓN DEL NODO EMISOR A PARTIR DEL PAQUETE RECIBIDO
+{
+        uint64_t timestamp;
+
+	int packetbuf_data_len = packetbuf_datalen();
+	uint8_t *packetbuf_ptr_head = (uint8_t*) malloc (sizeof(uint8_t) * packetbuf_data_len);
+	memcpy(packetbuf_ptr_head, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER
+	
+	uint8_t *packetbuf_ptr = packetbuf_ptr_head; //PUNTERO A COPIA DEL BUFFER
+	
+	//SE LEE EL PAYLOAD
+	memcpy(&timestamp, packetbuf_ptr, sizeof(uint64_t)); //COPIA EL TIMESATMP
+
+	
+	/* The payload structure:
+	* +-----------+------------+--------+-----+------+-----+-----+------+
+	* | Timestamp | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
+	* +-----------+------------+--------+-----+------+-----+-----+------+ -------->*/
+	
+	return timestamp;
 }
 
 
@@ -542,8 +570,14 @@ void iotorii_handle_send_sethlmac_timer ()
 }
 
 
+#if IOTORII_NODE_TYPE == 1 //ROOT
 void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address)
 {
+	static uint64_t timestamp=0;
+#else
+void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, uint64_t timestamp)
+{
+#endif
 	int mac_max_payload = max_payload();
 	
 	if (mac_max_payload <= 0) //FRAMING HA FALLADO Y SETHLMAC NO SE PUEDE CREAR
@@ -621,9 +655,17 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address)
 				packetbuf_ptr = packetbuf_ptr_head; //packetbuf_ptr = packetbuf_dataptr(); 
 				
 				/* The payload structure:
-				* +------------+--------+-----+------+-----+-----+------+
-				* | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
-				* +------------+--------+-----+------+-----+-----+------+ -------->*/
+				* +-----------+------------+--------+-----+------+-----+-----+------+
+				* | Timestamp | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
+				* +-----------+------------+--------+-----+------+-----+-----+------+ -------->*/
+				
+				memcpy(packetbuf_ptr, &timestamp, sizeof(uint64_t)); //COPIA LONGITUD PREFIJO DE VECINO
+				
+				packetbuf_ptr+=sizeof(uint64_t);
+				datalen_counter+=sizeof(uint64_t);
+	                        #if IOTORII_NODE_TYPE == 1 //ROOT
+				timestamp++;
+				#endif
 				
 				memcpy(packetbuf_ptr, &(addr.len), 1); //COPIA LONGITUD PREFIJO DE VECINO
 				
@@ -746,15 +788,7 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA (LOS TIMERS SE SOBREESCRIBEN)
 			ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 			#endif
-			#if IOTORII_NODE_TYPE != 1 //ROOT
-			//ENVÍA MENSAJE SETHLMAC EN CASO DE NO SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA
-			//iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address); //SE ENVÍA A LOS DEMÁS NODOS
-			#endif
 			ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
-			#if IOTORII_NODE_TYPE != 1 //NO ROOT
-			if(received_hlmac_addr_def)
-				iotorii_send_sethlmac(*received_hlmac_addr_def, sender_link_address_def); //SE ENVÍA A LOS DEMÁS NODOS
-			#endif
 		}
 		else
 		{
@@ -777,6 +811,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 
 	hlmacaddr_t *received_hlmac_addr;
 	received_hlmac_addr = iotorii_extract_address(); //SE COGE LA DIRECCIÓN RECIBIDA
+	uint64_t timestamp = iotorii_extract_timestamp(); //SE COGE EL TIMESTAMP RECIBIDA
 	
 	linkaddr_t sender_link_address = *packetbuf_addr(PACKETBUF_ADDR_SENDER);
 	const linkaddr_t *sender = &sender_link_address;
@@ -870,10 +905,11 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			{					
 				LOG_DBG("New HLMAC address is assigned to the node.\n");
 				LOG_DBG("New HLMAC address is sent to the neighbours.\n");
+				#if IOTORII_NODE_TYPE == 1
 				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address); //SE ENVÍA A LOS DEMÁS NODOS
-				#if IOTORII_NODE_TYPE != 1 //NODO COMÚN
-				received_hlmac_addr_def=received_hlmac_addr;
-				sender_link_address_def=sender_link_address;
+				#endif
+				#if IOTORII_NODE_TYPE != 1
+				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
 				#endif
 			}
 			else //NO SE HA ASIGNADO
@@ -951,6 +987,9 @@ static void iotorii_handle_sethlmac_timer ()
 	iotorii_send_sethlmac(root_addr, linkaddr_node_addr);
 	free(root_addr.address); //malloc() in hlmac_create_root_addr()
 	root_addr.address = NULL;
+	
+	
+	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_IDLE_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 }
 
 #endif
