@@ -570,14 +570,8 @@ void iotorii_handle_send_sethlmac_timer ()
 }
 
 
-#if IOTORII_NODE_TYPE == 1 //ROOT
-void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address)
-{
-	static uint64_t timestamp=0;
-#else
 void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, uint64_t timestamp)
 {
-#endif
 	int mac_max_payload = max_payload();
 	
 	if (mac_max_payload <= 0) //FRAMING HA FALLADO Y SETHLMAC NO SE PUEDE CREAR
@@ -663,9 +657,6 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				
 				packetbuf_ptr+=sizeof(uint64_t);
 				datalen_counter+=sizeof(uint64_t);
-	                        #if IOTORII_NODE_TYPE == 1 //ROOT
-				timestamp++;
-				#endif
 				
 				memcpy(packetbuf_ptr, &(addr.len), 1); //COPIA LONGITUD PREFIJO DE VECINO
 				
@@ -899,18 +890,13 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 
 		if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA AL HIJO
 		{
-			uint8_t is_added = hlmactable_add(*received_hlmac_addr);
+			uint8_t is_added = hlmactable_add(*received_hlmac_addr, timestamp);
 
 			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
 			{					
 				LOG_DBG("New HLMAC address is assigned to the node.\n");
 				LOG_DBG("New HLMAC address is sent to the neighbours.\n");
-				#if IOTORII_NODE_TYPE == 1
-				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address); //SE ENVÍA A LOS DEMÁS NODOS
-				#endif
-				#if IOTORII_NODE_TYPE != 1
 				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
-				#endif
 			}
 			else //NO SE HA ASIGNADO
 			{
@@ -976,20 +962,22 @@ void iotorii_operation (void)
 static void iotorii_handle_sethlmac_timer ()
 {
 	//uint8_t id = 1;
+	static uint64_t timestamp=0;
 	hlmacaddr_t root_addr; //SE CREA EL ROOT
 	hlmac_create_root_addr(&root_addr, 1);
-	hlmactable_add(root_addr);
+	hlmactable_add(root_addr, timestamp);
 	
 	#if LOG_DBG_STATISTIC == 1
 	//printf("Periodic Statistics: node_id: %u, convergence_time_start\n", node_id);
 	#endif
 	
-	iotorii_send_sethlmac(root_addr, linkaddr_node_addr);
+	iotorii_send_sethlmac(root_addr, linkaddr_node_addr, timestamp);
 	free(root_addr.address); //malloc() in hlmac_create_root_addr()
 	root_addr.address = NULL;
 	
 	
 	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_IDLE_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+	timestamp++;
 }
 
 #endif

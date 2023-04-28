@@ -24,7 +24,7 @@ void hlmac_table_init(void)
 }
 
 
-uint8_t hlmactable_add (const hlmacaddr_t addr)
+uint8_t hlmactable_add (const hlmacaddr_t addr, uint64_t timestamp)
 {
 	if (number_of_hlmac_addresses >= 255) //SI LA TABLA ESTÁ LLENA (255 DIRECCIONES)
 	{ 
@@ -33,11 +33,25 @@ uint8_t hlmactable_add (const hlmacaddr_t addr)
 		#endif
 		return 0;
 	}
-	
+
+	if (number_of_hlmac_addresses>0) //COMPRUEBA SI HAY UNA ENTRADA PARA COMPROBAR QUÉ TIMESTAMP ES MÁS RECIENTE
+	{
+		hlmac_table_entry_t* entry = list_tail (hlmac_table_entry_list);
+		if (timestamp > entry->timestamp)
+			hlmactable_chop();
+		//else if (timestamp == entry->timestamp) //SI ES IGUAL SE RETRANSMITE (CREA BUCLES)
+		//	return 1;
+		else
+			return 0;
+
+	}
+
 	if ( (HLMAC_MAX_HLMAC == -1) || ((HLMAC_MAX_HLMAC != -1)&&(number_of_hlmac_addresses < HLMAC_MAX_HLMAC)) ) //SI NO SE HA SUPERADO LA CAPACIDAD DE LA TABLA
 	{
 		hlmac_table_entry_t* entry = (hlmac_table_entry_t*) malloc (sizeof(hlmac_table_entry_t)); //SE RESERVA ESPACIO
 		entry->address = addr; //SE ASIGNA LA DIRECCIÓN DADA
+		
+		entry->timestamp=timestamp;
 		
 		list_add (hlmac_table_entry_list, entry);
 
@@ -72,6 +86,12 @@ uint8_t hlmactable_add (const hlmacaddr_t addr)
 	}
 }
 
+uint8_t hlmactable_chop (void)
+{
+	list_chop (hlmac_table_entry_list);
+	number_of_hlmac_addresses--; //SE DISMINUYE LA VARIABLE
+	return 1;
+}
 
 uint8_t hlmactable_has_loop (const hlmacaddr_t addr)
 {

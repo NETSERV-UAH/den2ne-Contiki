@@ -14,6 +14,7 @@ struct hlmac_table_entry
 {
 	struct hlmac_table_entry *next;
 	hlmacaddr_t address;
+	uint64_t timestamp;
 };
 
 typedef struct hlmac_table_entry hlmac_table_entry_t;
@@ -26,7 +27,10 @@ typedef struct hlmac_table_entry hlmac_table_entry_t;
 void hlmac_table_init (void);
 
 //AÑADE UNA DIRECCIÓN HLMAC AL FINAL DE LA TABLA
-uint8_t hlmactable_add (const hlmacaddr_t addr);
+uint8_t hlmactable_add (const hlmacaddr_t addr, uint64_t timestamp);
+
+//ELIMINA LA DIRECCIÓN HLMAC AL FINAL DE LA TABLA
+uint8_t hlmactable_chop (void);
 
 //COMPRUEBA SI LA DIRECCION HLMAC DADA CREA UN BUCLE O NO
 //DEVUELVE UN 1 SI HAY BUCLE Y 0 SI NO
