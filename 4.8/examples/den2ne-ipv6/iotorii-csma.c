@@ -209,7 +209,7 @@ udp_rx_callback(struct simple_udp_connection *c,
   LOG_INFO_("\n");
   rx_count++;
 }
-void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, int payload_len);
+void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, uint8_t length, uint8_t address, int payload_len);
 
 static void init_sec (void)
 {
@@ -538,9 +538,7 @@ static void iotorii_handle_hello_timer ()
 	   LOG_WARN("output: failed to calculate payload size - Hello can not be created\n");
 	else
 	{
-	        snprintf(str, sizeof(str), "hello");
-	        simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
-	        ipv6_send(&dest_ipaddr, 52, 10);
+	        ipv6_send(&dest_ipaddr, NULL, NULL, NULL, 0); //PRUEBA ES UNA VARIABLE DE PRUEBA
 		packetbuf_clear(); //HELLO NO TIENE PAYLOAD
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 		LOG_DBG("Hello prepared to send\n");
@@ -701,6 +699,8 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				
 				packetbuf_ptr += addr.len;
 				datalen_counter += addr.len;
+				
+				ipv6_send(&dest_ipaddr, timestamp, addr.len, addr.address, 0);
 
 				do
 				{
@@ -1206,9 +1206,9 @@ void list_this_node_entry (payload_entry_t *a, hlmacaddr_t *addr)
 	}
 }
 
-#define UIP_IOTORII_LEN 20
+#define UIP_IOTORII_LEN 6
 /* FUNCIÓN PARA ENVIAR SOBRE IPV6 */
-void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, int payload_len)
+void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, uint8_t length, uint8_t address, int payload_len)
 {
   UIP_IP_BUF->vtc = 0x60;
   UIP_IP_BUF->tcflow = 0;
@@ -1224,15 +1224,12 @@ void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, int payload_len)
 
   memcpy(&UIP_IP_BUF->destipaddr, dest, sizeof(*dest));
   uip_ds6_select_src(&UIP_IP_BUF->srcipaddr, &UIP_IP_BUF->destipaddr);
-
-  /*UIP_ICMP_BUF->type = type;
-  UIP_ICMP_BUF->icode = code;
-
-  UIP_ICMP_BUF->icmpchksum = 0;
-  UIP_ICMP_BUF->icmpchksum = ~uip_icmp6chksum();*/
+  
   UIP_IOTORII_BUF->timestamp = timestamp;
+  UIP_IOTORII_BUF->length = length;
+  UIP_IOTORII_BUF->address = address;
 
-  uip_len = UIP_IPH_LEN + payload_len;
+  uip_len = UIP_IPH_LEN + UIP_IOTORII_LEN + payload_len;
 
   //UIP_STAT(++uip_stat.icmp.sent);
   UIP_STAT(++uip_stat.ip.sent);

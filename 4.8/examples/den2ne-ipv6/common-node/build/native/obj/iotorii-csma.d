@@ -13,14 +13,27 @@ build/native/obj/../iotorii-csma.o: ../iotorii-csma.c ../csma-output.h \
  ../../../os/dev/radio.h ../iotorii-csma.h ../hlmacaddr.h \
  ../hlmac-table.h ../../../os/net/linkaddr.h ../../../os/sys/ctimer.h \
  ../../../os/lib/list.h ../../../os/lib/random.h \
- ../../../os/sys/node-id.h ../../../os/sys/rtimer.h \
- ../../../os/net/mac/mac-sequence.h ../../../os/net/packetbuf.h \
- ../../../os/net/mac/llsec802154.h \
- ../../../os/net/mac/framer/frame802154.h ../../../os/net/ipv6/uip.h \
+ ../../../os/net/netstack.h ../../../os/net/mac/framer/framer.h \
+ ../../../os/net/routing/routing.h ../../../os/net/ipv6/uip.h \
  ../../../os/net/ipv6/uipopt.h ../../../os/net/ipv6/uipbuf.h \
- ../../../os/net/ipv6/tcpip.h ../../../os/net/mac/csma/csma-security.h \
- ../../../os/net/mac/tsch/tsch-conf.h ../../../os/net/netstack.h \
- ../../../os/net/mac/framer/framer.h ../../../os/sys/log.h \
+ ../../../os/net/ipv6/tcpip.h ../../../os/net/ipv6/uip-ds6-nbr.h \
+ ../../../os/net/ipv6/uip-nd6.h ../../../os/sys/stimer.h \
+ ../../../os/net/nbr-table.h ../../../os/net/ipv6/uip-packetqueue.h \
+ ../../../os/net/ipv6/uip-ds6-route.h ../../../os/net/ipv6/uip-sr.h \
+ ../../../os/net/ipv6/simple-udp.h ../../../os/sys/node-id.h \
+ ../../../os/sys/rtimer.h ../../../os/net/mac/mac-sequence.h \
+ ../../../os/net/packetbuf.h ../../../os/net/mac/llsec802154.h \
+ ../../../os/net/mac/framer/frame802154.h \
+ ../../../os/net/mac/csma/csma-security.h \
+ ../../../os/net/mac/tsch/tsch-conf.h ../../../os/net/ipv6/uip-ds6.h \
+ ../../../os/net/ipv6/multicast/uip-mcast6.h \
+ ../../../os/net/ipv6/multicast/uip-mcast6-engines.h \
+ ../../../os/net/ipv6/multicast/uip-mcast6-route.h \
+ ../../../os/net/ipv6/multicast/smrf.h \
+ ../../../os/net/ipv6/multicast/esmrf.h \
+ ../../../os/net/ipv6/multicast/roll-tm.h \
+ ../../../os/net/ipv6/multicast/uip-mcast6-stats.h \
+ ../../../os/net/ipv6/multicast/mpl.h ../../../os/sys/log.h \
  ../../../os/sys/log-conf.h
 ../csma-output.h:
 ../../../os/contiki.h:
@@ -55,19 +68,37 @@ project-conf.h:
 ../../../os/sys/ctimer.h:
 ../../../os/lib/list.h:
 ../../../os/lib/random.h:
+../../../os/net/netstack.h:
+../../../os/net/mac/framer/framer.h:
+../../../os/net/routing/routing.h:
+../../../os/net/ipv6/uip.h:
+../../../os/net/ipv6/uipopt.h:
+../../../os/net/ipv6/uipbuf.h:
+../../../os/net/ipv6/tcpip.h:
+../../../os/net/ipv6/uip-ds6-nbr.h:
+../../../os/net/ipv6/uip-nd6.h:
+../../../os/sys/stimer.h:
+../../../os/net/nbr-table.h:
+../../../os/net/ipv6/uip-packetqueue.h:
+../../../os/net/ipv6/uip-ds6-route.h:
+../../../os/net/ipv6/uip-sr.h:
+../../../os/net/ipv6/simple-udp.h:
 ../../../os/sys/node-id.h:
 ../../../os/sys/rtimer.h:
 ../../../os/net/mac/mac-sequence.h:
 ../../../os/net/packetbuf.h:
 ../../../os/net/mac/llsec802154.h:
 ../../../os/net/mac/framer/frame802154.h:
-../../../os/net/ipv6/uip.h:
-../../../os/net/ipv6/uipopt.h:
-../../../os/net/ipv6/uipbuf.h:
-../../../os/net/ipv6/tcpip.h:
 ../../../os/net/mac/csma/csma-security.h:
 ../../../os/net/mac/tsch/tsch-conf.h:
-../../../os/net/netstack.h:
-../../../os/net/mac/framer/framer.h:
+../../../os/net/ipv6/uip-ds6.h:
+../../../os/net/ipv6/multicast/uip-mcast6.h:
+../../../os/net/ipv6/multicast/uip-mcast6-engines.h:
+../../../os/net/ipv6/multicast/uip-mcast6-route.h:
+../../../os/net/ipv6/multicast/smrf.h:
+../../../os/net/ipv6/multicast/esmrf.h:
+../../../os/net/ipv6/multicast/roll-tm.h:
+../../../os/net/ipv6/multicast/uip-mcast6-stats.h:
+../../../os/net/ipv6/multicast/mpl.h:
 ../../../os/sys/log.h:
 ../../../os/sys/log-conf.h:

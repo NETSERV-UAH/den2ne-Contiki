@@ -20,9 +20,11 @@ build/native/obj/queuebuf.o: ../../../os/net/queuebuf.c \
  ../../../os/net/ipv6/uip-nd6.h ../../../os/sys/stimer.h \
  ../../../os/net/nbr-table.h ../../../os/net/netstack.h \
  ../../../os/net/mac/mac.h ../../../os/dev/radio.h \
- ../../../os/net/mac/framer/framer.h ../../../os/net/ipv6/uip-ds6-route.h \
- ../../../os/lib/list.h ../../../os/net/ipv6/uip-sr.h \
- ../../../os/net/ipv6/uip-icmp6.h ../../../os/net/ipv6/uip-ds6.h \
+ ../../../os/net/mac/framer/framer.h \
+ ../../../os/net/ipv6/uip-packetqueue.h ../../../os/sys/ctimer.h \
+ ../../../os/net/ipv6/uip-ds6-route.h ../../../os/lib/list.h \
+ ../../../os/net/ipv6/uip-sr.h ../../../os/net/ipv6/uip-icmp6.h \
+ ../../../os/net/ipv6/uip-ds6.h \
  ../../../os/net/ipv6/multicast/uip-mcast6.h \
  ../../../os/net/ipv6/multicast/uip-mcast6-engines.h \
  ../../../os/net/ipv6/multicast/uip-mcast6-route.h \
@@ -84,6 +86,8 @@ project-conf.h:
 ../../../os/net/mac/mac.h:
 ../../../os/dev/radio.h:
 ../../../os/net/mac/framer/framer.h:
+../../../os/net/ipv6/uip-packetqueue.h:
+../../../os/sys/ctimer.h:
 ../../../os/net/ipv6/uip-ds6-route.h:
 ../../../os/lib/list.h:
 ../../../os/net/ipv6/uip-sr.h:

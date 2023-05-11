@@ -20,6 +20,7 @@ build/native/obj/contiki-main.o: ../../../os/contiki-main.c \
  ../../../os/sys/stimer.h ../../../os/net/nbr-table.h \
  ../../../os/net/netstack.h ../../../os/net/mac/mac.h \
  ../../../os/dev/radio.h ../../../os/net/mac/framer/framer.h \
+ ../../../os/net/ipv6/uip-packetqueue.h ../../../os/sys/ctimer.h \
  ../../../os/net/ipv6/uip-ds6-route.h ../../../os/lib/list.h \
  ../../../os/net/ipv6/uip-sr.h ../../../os/net/ipv6/uip-icmp6.h \
  ../../../os/net/ipv6/uip-ds6.h \
@@ -72,6 +73,18 @@ build/native/obj/contiki-main.o: ../../../os/contiki-main.c \
  ../../../os/net/mac/tsch/tsch-schedule.h \
  ../../../os/net/mac/tsch/tsch-stats.h \
  ../../../os/net/mac/tsch/tsch-roots.h \
+ ../../../os/net/mac/tsch/tsch-rpl.h ../../../os/net/routing/routing.h \
+ ../../../os/net/routing/rpl-lite/rpl.h \
+ ../../../os/net/routing/rpl-lite/rpl-const.h \
+ ../../../os/net/routing/rpl-lite/rpl-conf.h \
+ ../../../os/net/routing/rpl-lite/rpl-types.h \
+ ../../../os/net/routing/rpl-lite/rpl-icmp6.h ../../../os/net/ipv6/uip.h \
+ ../../../os/net/ipv6/uip-ds6.h ../../../os/net/ipv6/uip-ds6-nbr.h \
+ ../../../os/net/routing/rpl-lite/rpl-dag.h \
+ ../../../os/net/routing/rpl-lite/rpl-dag-root.h \
+ ../../../os/net/routing/rpl-lite/rpl-neighbor.h \
+ ../../../os/net/routing/rpl-lite/rpl-ext-header.h \
+ ../../../os/net/routing/rpl-lite/rpl-timers.h \
  ../../../os/services/orchestra/orchestra-conf.h \
  ../../../os/services/shell/serial-shell.h \
  ../../../os/services/simple-energest/simple-energest.h \
@@ -121,6 +134,8 @@ project-conf.h:
 ../../../os/net/mac/mac.h:
 ../../../os/dev/radio.h:
 ../../../os/net/mac/framer/framer.h:
+../../../os/net/ipv6/uip-packetqueue.h:
+../../../os/sys/ctimer.h:
 ../../../os/net/ipv6/uip-ds6-route.h:
 ../../../os/lib/list.h:
 ../../../os/net/ipv6/uip-sr.h:
@@ -190,6 +205,21 @@ project-conf.h:
 ../../../os/net/mac/tsch/tsch-schedule.h:
 ../../../os/net/mac/tsch/tsch-stats.h:
 ../../../os/net/mac/tsch/tsch-roots.h:
+../../../os/net/mac/tsch/tsch-rpl.h:
+../../../os/net/routing/routing.h:
+../../../os/net/routing/rpl-lite/rpl.h:
+../../../os/net/routing/rpl-lite/rpl-const.h:
+../../../os/net/routing/rpl-lite/rpl-conf.h:
+../../../os/net/routing/rpl-lite/rpl-types.h:
+../../../os/net/routing/rpl-lite/rpl-icmp6.h:
+../../../os/net/ipv6/uip.h:
+../../../os/net/ipv6/uip-ds6.h:
+../../../os/net/ipv6/uip-ds6-nbr.h:
+../../../os/net/routing/rpl-lite/rpl-dag.h:
+../../../os/net/routing/rpl-lite/rpl-dag-root.h:
+../../../os/net/routing/rpl-lite/rpl-neighbor.h:
+../../../os/net/routing/rpl-lite/rpl-ext-header.h:
+../../../os/net/routing/rpl-lite/rpl-timers.h:
 ../../../os/services/orchestra/orchestra-conf.h:
 ../../../os/services/shell/serial-shell.h:
 ../../../os/services/simple-energest/simple-energest.h:

@@ -1676,6 +1676,8 @@ struct uip_udp_hdr {
 /* The IOTORII headers. */
 struct uip_iotorii_hdr {
   uint32_t timestamp;
+  uint8_t length;
+  uint8_t address;
 };
 
 

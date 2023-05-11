@@ -22,8 +22,19 @@ build/native/obj/platform.o: ../../../arch/platform/native/./platform.c \
  ../../../os/net/mac/llsec802154.h \
  ../../../os/net/mac/framer/frame802154.h \
  ../../../os/net/mac/csma/csma-security.h \
- ../../../os/net/mac/tsch/tsch-conf.h ../../../os/sys/log.h \
- ../../../os/sys/log-conf.h
+ ../../../os/net/mac/tsch/tsch-conf.h ../../../os/net/ipv6/uip-ds6.h \
+ ../../../os/net/ipv6/multicast/uip-mcast6.h \
+ ../../../os/net/ipv6/multicast/uip-mcast6-engines.h \
+ ../../../os/net/ipv6/multicast/uip-mcast6-route.h \
+ ../../../os/net/ipv6/multicast/smrf.h \
+ ../../../os/net/ipv6/multicast/esmrf.h \
+ ../../../os/net/ipv6/multicast/roll-tm.h \
+ ../../../os/net/ipv6/multicast/uip-mcast6-stats.h \
+ ../../../os/net/ipv6/multicast/mpl.h ../../../os/sys/stimer.h \
+ ../../../os/net/ipv6/uip-nd6.h ../../../os/net/ipv6/uip-ds6-nbr.h \
+ ../../../os/net/nbr-table.h ../../../os/net/ipv6/uip-packetqueue.h \
+ ../../../os/net/ipv6/uip-ds6-route.h ../../../os/lib/list.h \
+ ../../../os/sys/log.h ../../../os/sys/log-conf.h
 ../../../os/contiki.h:
 ../../../arch/platform/native/./contiki-conf.h:
 project-conf.h:
@@ -70,5 +81,21 @@ project-conf.h:
 ../../../os/net/mac/framer/frame802154.h:
 ../../../os/net/mac/csma/csma-security.h:
 ../../../os/net/mac/tsch/tsch-conf.h:
+../../../os/net/ipv6/uip-ds6.h:
+../../../os/net/ipv6/multicast/uip-mcast6.h:
+../../../os/net/ipv6/multicast/uip-mcast6-engines.h:
+../../../os/net/ipv6/multicast/uip-mcast6-route.h:
+../../../os/net/ipv6/multicast/smrf.h:
+../../../os/net/ipv6/multicast/esmrf.h:
+../../../os/net/ipv6/multicast/roll-tm.h:
+../../../os/net/ipv6/multicast/uip-mcast6-stats.h:
+../../../os/net/ipv6/multicast/mpl.h:
+../../../os/sys/stimer.h:
+../../../os/net/ipv6/uip-nd6.h:
+../../../os/net/ipv6/uip-ds6-nbr.h:
+../../../os/net/nbr-table.h:
+../../../os/net/ipv6/uip-packetqueue.h:
+../../../os/net/ipv6/uip-ds6-route.h:
+../../../os/lib/list.h:
 ../../../os/sys/log.h:
 ../../../os/sys/log-conf.h:

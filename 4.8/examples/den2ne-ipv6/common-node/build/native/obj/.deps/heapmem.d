@@ -11,6 +11,8 @@ build/native/obj/heapmem.o: ../../../os/lib/heapmem.c \
  ../../../os/sys/rtimer.h ../../../os/dev/watchdog.h \
  ../../../arch/cpu/native/./rtimer-arch.h ../../../os/sys/pt.h \
  ../../../os/sys/clock.h ../../../os/sys/log-conf.h \
+ ../../../os/net/ipv6/uip.h ../../../os/net/ipv6/uipopt.h \
+ ../../../os/net/ipv6/uipbuf.h ../../../os/net/ipv6/tcpip.h \
  ../../../os/lib/heapmem.h
 ../../../os/sys/log.h:
 ../../../os/net/linkaddr.h:
@@ -38,4 +40,8 @@ project-conf.h:
 ../../../os/sys/pt.h:
 ../../../os/sys/clock.h:
 ../../../os/sys/log-conf.h:
+../../../os/net/ipv6/uip.h:
+../../../os/net/ipv6/uipopt.h:
+../../../os/net/ipv6/uipbuf.h:
+../../../os/net/ipv6/tcpip.h:
 ../../../os/lib/heapmem.h:
