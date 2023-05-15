@@ -46,7 +46,7 @@
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
 #define IOTORII_HELLO_IDLE_TIME IOTORII_CONF_HELLO_IDLE_TIME
 #else
-#define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 60 s
+#define IOTORII_HELLO_IDLE_TIME 5 //Default Delay is 60 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
@@ -55,11 +55,6 @@
 #define IOTORII_SETHLMAC_START_TIME IOTORII_CONF_SETHLMAC_START_TIME
 #else
 #define IOTORII_SETHLMAC_START_TIME 5 //Default Delay is 10 s
-#endif
-#ifdef IOTORII_CONF_SETHLMAC_IDLE_TIME
-#define IOTORII_SETHLMAC_IDLE_TIME IOTORII_CONF_SETHLMAC_IDLE_TIME
-#else
-#define IOTORII_SETHLMAC_IDLE_TIME 30 //Default Delay is 10 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA UN NODO COMÚN HASTA QUE SE ENVÍA MENSAJE SETHLMAC A LOS VECINOS
@@ -187,8 +182,7 @@ clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
 int number_of_neighbours;
 int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 
-#define UDP_CLIENT_PORT	8765
-#define UDP_SERVER_PORT	5678
+#define UDP_PORT	5678
 static struct simple_udp_connection udp_conn;
 static uint32_t rx_count = 0;
 static char str[32];
@@ -207,9 +201,12 @@ udp_rx_callback(struct simple_udp_connection *c,
   LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
 #endif
   LOG_INFO_("\n");
+  printf("Received response '%.*s' from ", datalen, (char *) data);
   rx_count++;
 }
-void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, uint8_t length, uint8_t address, int payload_len);
+
+	
+//void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, uint8_t length, uint8_t address, int payload_len);
 
 static void init_sec (void)
 {
@@ -448,83 +445,85 @@ static void iotorii_handle_statistic_timer ()
 	node = list_head(node_list); 
 	neighbour_table_entry_t *nb;
 	
-	if (start_share == 0 && msg_share_on == 0)
-	{
-		//printf("Periodic Statistics: node_id: %u, n_hello: %d, n_sethlmac: %d, n_neighbours: %d\n", node_id, number_of_hello_messages, number_of_sethlmac_messages, number_of_neighbours);
-		printf("//INFO STATISTICS// n_hello: %d, n_sethlmac: %d\n", number_of_hello_messages, number_of_sethlmac_messages);
-		printf("//INFO STATISTICS// El nodo %s tiene %d vecinos y no ha recibido HLMAC de %d vecinos: ", node->str_addr, number_of_neighbours, number_of_neighbours_flag);
-		
-		if (!number_of_neighbours_flag)
-		{
-			printf("es edge\n");		
-			edge = 1; 
+        if(node!=NULL){
+	        if (start_share == 0 && msg_share_on == 0)
+	        {
+		        //printf("Periodic Statistics: node_id: %u, n_hello: %d, n_sethlmac: %d, n_neighbours: %d\n", node_id, number_of_hello_messages, number_of_sethlmac_messages, number_of_neighbours);
+		        printf("//INFO STATISTICS// n_hello: %d, n_sethlmac: %d\n", number_of_hello_messages, number_of_sethlmac_messages);
+		          printf("//INFO STATISTICS// El nodo %s tiene %d vecinos y no ha recibido HLMAC de %d vecinos: ", node->str_addr, number_of_neighbours, number_of_neighbours_flag);
+		        
+		        if (!number_of_neighbours_flag)
+		        {
+			        printf("es edge\n");		
+			        edge = 1; 
 
-			if (start_load == 0 && sent_no_edge == 0) //NO SE HA INICIADO EL ENVÍO DE MENSAJES TODAVÍA
-				ctimer_set(&load_timer, IOTORII_LOAD_START_TIME * CLOCK_SECOND, iotorii_handle_load_timer, NULL); 
-		}
-		else
-		{
-			printf("no es edge\n");
-			
-			if (start_load == 1 && sent_no_edge == 0) //SEGUNDA VUELTA CUANDO YA SE HA INFORMADO DE LA CARGA DE LOS NODOS EDGE
-			{
-				ctimer_set(&load_timer, /*IOTORII_LOAD_START_TIME*/ (random_rand() % (IOTORII_LOAD_START_TIME*3)) * CLOCK_SECOND, iotorii_handle_load_timer, NULL); 
-				sent_no_edge = 1;
-			}
-		}
+			        if (start_load == 0 && sent_no_edge == 0) //NO SE HA INICIADO EL ENVÍO DE MENSAJES TODAVÍA
+				        ctimer_set(&load_timer, IOTORII_LOAD_START_TIME * CLOCK_SECOND, iotorii_handle_load_timer, NULL); 
+		        }
+		        else
+		        {
+			        printf("no es edge\n");
+			        
+			        if (start_load == 1 && sent_no_edge == 0) //SEGUNDA VUELTA CUANDO YA SE HA INFORMADO DE LA CARGA DE LOS NODOS EDGE
+			        {
+				        ctimer_set(&load_timer, /*IOTORII_LOAD_START_TIME*/ (random_rand() % (IOTORII_LOAD_START_TIME*3)) * CLOCK_SECOND, iotorii_handle_load_timer, NULL); 
+				        sent_no_edge = 1;
+			        }
+		        }
 
-		start_load = 1; //SE PONE A 1 CUANDO HAN EMPEZADO LOS EDGE A ENVIAR CARGAS Y ACTIVA LOS ENVÍOS EN LOS NODOS NO EDGE
-		
-		printf("Carga actual del nodo: %d\n", node->load);
-		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb)) //LISTA DE VECINOS DEL NODO
-		{				
-			if (nb->flag == 1 || nb->flag == -1)
-				printf("--> Vecino padre (flag, carga, in_out) --> ");
-			else
-			{
-				printf("--> Vecino hijo  (flag, carga, in_out) --> ");	
-				if (count_hijos == 0)
-					n_hijos++;
-			}
-			
-			if (nb->flag == -1)
-				printf("%d, %d, (%d)\n", nb->flag, nb->load, nb->in_out);		
-			else
-				printf("%d, %d, %d\n", nb->flag, nb->load, nb->in_out);		
-		}
-		
-		count_hijos = 1; //SE HA REALIZADO LA CUENTA DE LOS HIJOS
-		
-		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
-		{
-			if (nb->load == 0)
-				load_null++; //SE CONTABILIZAN LOS VECINOS CON CARGA TODAVÍA DESCONOCIDA
-		}		
+		        start_load = 1; //SE PONE A 1 CUANDO HAN EMPEZADO LOS EDGE A ENVIAR CARGAS Y ACTIVA LOS ENVÍOS EN LOS NODOS NO EDGE
+		        
+		        printf("Carga actual del nodo: %d\n", node->load);
+		        for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb)) //LISTA DE VECINOS DEL NODO
+		        {				
+			        if (nb->flag == 1 || nb->flag == -1)
+				        printf("--> Vecino padre (flag, carga, in_out) --> ");
+			        else
+			        {
+				        printf("--> Vecino hijo  (flag, carga, in_out) --> ");	
+				        if (count_hijos == 0)
+					        n_hijos++;
+			        }
+			        
+			        if (nb->flag == -1)
+				        printf("%d, %d, (%d)\n", nb->flag, nb->load, nb->in_out);		
+			        else
+				        printf("%d, %d, %d\n", nb->flag, nb->load, nb->in_out);		
+		        }
+		        
+		        count_hijos = 1; //SE HA REALIZADO LA CUENTA DE LOS HIJOS
+		        
+		        for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+		        {
+			        if (nb->load == 0)
+				        load_null++; //SE CONTABILIZAN LOS VECINOS CON CARGA TODAVÍA DESCONOCIDA
+		        }		
+	        }
+	        else if (msg_share_on == 1)
+	        {
+		        printf("Carga actual del nodo: %d\n", node->load);
+		        for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb)) //LISTA DE VECINOS DEL NODO
+		        {
+			        if (nb->flag == 1 || nb->flag == -1)
+				        printf("--> Vecino padre (flag, carga inicial, in_out) --> ");
+			        else
+				        printf("--> Vecino hijo  (flag, carga inicial, in_out) --> ");
+			        
+			        if (nb->flag == -1)
+				        printf("%d, %d, (%d)\n", nb->flag, nb->load, nb->in_out);		
+			        else
+				        printf("%d, %d, %d\n", nb->flag, nb->load, nb->in_out);				
+		        }	
+	        }	
+	        
+	        if ((edge == 1 || new_edge == 1) && load_null == 0) //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
+		        ctimer_set(&share_timer, IOTORII_SHARE_START_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);	
+	        
+	        if (load_null == 0) //SI UN NODO SABE YA TODAS LAS CARGAS DE SUS VECINOS PUEDE COMENZAR CON EL REPARTO DE CARGAS
+		        msg_share_on = 1;
+	        else
+		        printf("//INFO STATISTICS// Faltan %d nodos por conocer su carga\n", load_null);
 	}
-	else if (msg_share_on == 1)
-	{
-		printf("Carga actual del nodo: %d\n", node->load);
-		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb)) //LISTA DE VECINOS DEL NODO
-		{
-			if (nb->flag == 1 || nb->flag == -1)
-				printf("--> Vecino padre (flag, carga inicial, in_out) --> ");
-			else
-				printf("--> Vecino hijo  (flag, carga inicial, in_out) --> ");
-			
-			if (nb->flag == -1)
-				printf("%d, %d, (%d)\n", nb->flag, nb->load, nb->in_out);		
-			else
-				printf("%d, %d, %d\n", nb->flag, nb->load, nb->in_out);				
-		}	
-	}	
-	
-	if ((edge == 1 || new_edge == 1) && load_null == 0) //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
-		ctimer_set(&share_timer, IOTORII_SHARE_START_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);	
-	
-	if (load_null == 0) //SI UN NODO SABE YA TODAS LAS CARGAS DE SUS VECINOS PUEDE COMENZAR CON EL REPARTO DE CARGAS
-		msg_share_on = 1;
-	else
-		printf("//INFO STATISTICS// Faltan %d nodos por conocer su carga\n", load_null);
 }
 
 #endif
@@ -538,7 +537,9 @@ static void iotorii_handle_hello_timer ()
 	   LOG_WARN("output: failed to calculate payload size - Hello can not be created\n");
 	else
 	{
-	        ipv6_send(&dest_ipaddr, NULL, NULL, NULL, 0); //PRUEBA ES UNA VARIABLE DE PRUEBA
+	        int data = 32;
+	        //ipv6_send(&dest_ipaddr, NULL, NULL, NULL, 0);
+	        simple_udp_sendto_port(&udp_conn, &data, 1, &dest_ipaddr, 5678);
 		packetbuf_clear(); //HELLO NO TIENE PAYLOAD
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 		LOG_DBG("Hello prepared to send\n");
@@ -550,11 +551,11 @@ static void iotorii_handle_hello_timer ()
 
 		send_packet(NULL, NULL);
 	}
-	if(list_head(neighbour_table_entry_list)== NULL){
-		ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
-	}else{
-		ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
-	}
+	#if IOTORII_NODE_TYPE == 1 //ROOT
+	//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA (LOS TIMERS SE SOBREESCRIBEN)
+	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+	#endif
+	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 }
 
 
@@ -700,7 +701,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				packetbuf_ptr += addr.len;
 				datalen_counter += addr.len;
 				
-				ipv6_send(&dest_ipaddr, timestamp, addr.len, addr.address, 0);
+				//ipv6_send(&dest_ipaddr, timestamp, addr.len, addr.address, 0);
 
 				do
 				{
@@ -809,11 +810,6 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			
 			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
 
-			#if IOTORII_NODE_TYPE == 1 //ROOT
-			//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA (LOS TIMERS SE SOBREESCRIBEN)
-			ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
-			#endif
-			ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
 		}
 		else
 		{
@@ -931,6 +927,9 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				LOG_DBG("New HLMAC address is assigned to the node.\n");
 				LOG_DBG("New HLMAC address is sent to the neighbours.\n");
 				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
+				#if IOTORII_NODE_TYPE == 2
+				ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+				#endif
 			}
 			else //NO SE HA ASIGNADO
 			{
@@ -1009,8 +1008,10 @@ static void iotorii_handle_sethlmac_timer ()
 	free(root_addr.address); //malloc() in hlmac_create_root_addr()
 	root_addr.address = NULL;
 	
-	
-	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_IDLE_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+	//ESTADÍSTICAS
+	#if LOG_DBG_STATISTIC == 1
+	ctimer_set(&statistic_timer, IOTORII_STATISTICS1_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL);
+	#endif
 	timestamp++;
 }
 
@@ -1075,7 +1076,7 @@ static void init (void)
 	
 	
         uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0,0,0,0x3);
-        simple_udp_register(&udp_conn, UDP_SERVER_PORT, NULL, UDP_CLIENT_PORT, udp_rx_callback);
+        simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);
 }
 
 
@@ -1208,7 +1209,7 @@ void list_this_node_entry (payload_entry_t *a, hlmacaddr_t *addr)
 
 #define UIP_IOTORII_LEN 6
 /* FUNCIÓN PARA ENVIAR SOBRE IPV6 */
-void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, uint8_t length, uint8_t address, int payload_len)
+/*void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, uint8_t length, uint8_t address, int payload_len)
 {
   UIP_IP_BUF->vtc = 0x60;
   UIP_IP_BUF->tcflow = 0;
@@ -1239,4 +1240,4 @@ void ipv6_send(const uip_ipaddr_t *dest, uint32_t timestamp, uint8_t length, uin
   LOG_INFO_(", code %u, len %u\n", timestamp, payload_len);
 
   tcpip_ipv6_output();
-}
+}*/
