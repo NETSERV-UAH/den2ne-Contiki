@@ -185,7 +185,6 @@ int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 #define UDP_PORT	5678
 static struct simple_udp_connection udp_conn;
 static uint32_t rx_count = 0;
-static char str[32];
 uip_ipaddr_t dest_ipaddr;
 static void
 udp_rx_callback(struct simple_udp_connection *c,
@@ -537,9 +536,9 @@ static void iotorii_handle_hello_timer ()
 	   LOG_WARN("output: failed to calculate payload size - Hello can not be created\n");
 	else
 	{
-	        int data = 32;
+	        char* data = "hello";
 	        //ipv6_send(&dest_ipaddr, NULL, NULL, NULL, 0);
-	        simple_udp_sendto_port(&udp_conn, &data, 1, &dest_ipaddr, 5678);
+	        simple_udp_sendto_port(&udp_conn, data, 12, &dest_ipaddr, 5678);
 		packetbuf_clear(); //HELLO NO TIENE PAYLOAD
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 		LOG_DBG("Hello prepared to send\n");
@@ -1075,8 +1074,9 @@ static void init (void)
 	#endif
 	
 	
-        uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0,0,0,0x3);
+        uip_ip6addr(&dest_ipaddr, 0xFD00,0,0,0,0x302,0x304,0x506,0x709);
         simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);
+        udp_conn.udp_conn->ttl=10;
 }
 
 
