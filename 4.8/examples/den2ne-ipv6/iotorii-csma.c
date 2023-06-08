@@ -23,6 +23,7 @@
 #include "net/netstack.h"
 
 #include "net/ipv6/uip-ds6.h"
+#include "net/ipv6/uiplib.h"
 
 /* Log configuration */
 
@@ -195,14 +196,12 @@ udp_rx_callback(struct simple_udp_connection *c,
          uint16_t receiver_port,
          const uint8_t *data,
          uint16_t datalen){
-  LOG_INFO("Received response '%.*s' from ", datalen, (char *) data);
-  LOG_INFO_6ADDR(sender_addr);
-#if LLSEC802154_CONF_ENABLED
-  LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
-#endif
-  LOG_INFO_("\n");
-  printf("Received response '%.*s' from ", datalen, (char *) data);
-  rx_count++;
+	char *sender_ip=(char *) malloc (sizeof(char) * 32);
+	size_t size=32;
+	uiplib_ipaddr_snprint(sender_ip, size, sender_addr);
+	printf("Received response '%.*s' from %s\n", datalen, (char *) data, sender_ip);
+	if(!strcmp((char *)data, "hello"))
+		printf("Mensaje HELLO recibido\n");
 }
 
 	
@@ -530,28 +529,15 @@ static void iotorii_handle_statistic_timer ()
 
 
 static void iotorii_handle_hello_timer ()
-{
-	int mac_max_payload = max_payload();
+{	
+	udp_conn.udp_conn->lport=15650;
+	simple_udp_sendto(&udp_conn, "hello", strlen("hello"), &dest_ipaddr);
+	printf("//INFO HANDLE HELLO// Mensaje Hello enviado\n");
 	
-	if (mac_max_payload <= 0) //FRAMING HA FALLADO Y NO SE PUEDE CREAR HELLO
-	   LOG_WARN("output: failed to calculate payload size - Hello can not be created\n");
-	else
-	{
-	        int data = 32;
-	        //ipv6_send(&dest_ipaddr, NULL, NULL, NULL, 0);
-        udp_conn.udp_conn->lport=15650;
-	    simple_udp_sendto(&udp_conn, &data, 1, &dest_ipaddr);
-		packetbuf_clear(); //HELLO NO TIENE PAYLOAD
-		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-		LOG_DBG("Hello prepared to send\n");
-		printf("//INFO HANDLE HELLO// Mensaje Hello enviado\n");
+	#if LOG_DBG_STATISTIC == 1
+	number_of_hello_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES HELLO
+	#endif
 		
-		#if LOG_DBG_STATISTIC == 1
-		number_of_hello_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES HELLO
-		#endif
-
-		send_packet(NULL, NULL);
-	}
 	#if IOTORII_NODE_TYPE == 1 //ROOT
 	//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA (LOS TIMERS SE SOBREESCRIBEN)
 	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
@@ -702,7 +688,8 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				packetbuf_ptr += addr.len;
 				datalen_counter += addr.len;
 				
-				//ipv6_send(&dest_ipaddr, timestamp, addr.len, addr.address, 0);
+				//SE PREPARA EL ENVÍO A TRAVÉS DE IPv6
+				snprintf(str, sizeof(str), "%" PRIu32 "%" PRIu32, timestamp, addr.len);
 
 				do
 				{
@@ -718,6 +705,11 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 
 					i++;
 				} while (mac_max_payload >= (datalen_counter + LINKADDR_SIZE + 1) && i <= number_of_neighbours_new);
+				
+				//SE ENVÍA EL MENSAJE A TRAVÉS DE IPv6
+				udp_conn.udp_conn->lport=15650;
+				simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
+				printf("//INFO HANDLE HELLO// Mensaje Hello enviado\n");
 
 				//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
 				payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
