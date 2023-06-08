@@ -182,12 +182,11 @@ clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
 int number_of_neighbours;
 int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 
-#define WITH_SERVER_REPLY  1
-#define UDP_CLIENT_PORT	8765
-#define UDP_SERVER_PORT	5678
+#define UDP_PORT	8765
 static struct simple_udp_connection udp_conn;
 static uint32_t rx_count = 0;
-static uip_ipaddr_t dest_ipaddr;
+static char str[32];
+uip_ipaddr_t dest_ipaddr;
 static void
 udp_rx_callback(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
@@ -538,15 +537,10 @@ static void iotorii_handle_hello_timer ()
 	   LOG_WARN("output: failed to calculate payload size - Hello can not be created\n");
 	else
 	{
-            static char str[32];
-            static uint32_t tx_count;
-	              //char* data = "hello";
-	              //ipv6_send(&dest_ipaddr, NULL, NULL, NULL, 0);
-	              //simple_udp_sendto_port(&udp_conn, data, 12, &dest_ipaddr, 5678);
-            snprintf(str, sizeof(str), "hello %" PRIu32 "", tx_count);
-            tx_count++;
-                udp_conn.udp_conn->lport=15650;; //SE RESETEA DESDE EL INIT HASTA AQUÍ
-                simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
+	        int data = 32;
+	        //ipv6_send(&dest_ipaddr, NULL, NULL, NULL, 0);
+        udp_conn.udp_conn->lport=15650;
+	    simple_udp_sendto(&udp_conn, &data, 1, &dest_ipaddr);
 		packetbuf_clear(); //HELLO NO TIENE PAYLOAD
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 		LOG_DBG("Hello prepared to send\n");
@@ -1082,10 +1076,8 @@ static void init (void)
 	#endif
 	
 	
-        uip_ip6addr(&dest_ipaddr, 0xFD00,0,0,0,0x302,0x304,0x506,0x709);
-        //simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);
-  simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
-                      UDP_SERVER_PORT, udp_rx_callback);
+        uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x709);
+        simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);
         udp_conn.udp_conn->ttl=10;
 }
 
