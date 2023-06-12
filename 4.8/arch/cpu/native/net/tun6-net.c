@@ -65,7 +65,7 @@
 #include "net/netstack.h"
 #include "net/packetbuf.h"
 
-static const char *config_ipaddr = "fd02::2/64";
+static const char *config_ipaddr = "fd03::2/64";
 /* Allocate some bytes in RAM and copy the string */
 static char config_tundev[IFNAMSIZ + 1] = "tun0";
 

@@ -69,11 +69,12 @@ PROCESS_THREAD(udp_server_process, ev, data)
   PROCESS_BEGIN();
 
   /* Initialize DAG root */
-  NETSTACK_ROUTING.root_start();
+  //NETSTACK_ROUTING.root_start();
 
   /* Initialize UDP connection */
   simple_udp_register(&udp_conn, UDP_SERVER_PORT, NULL,
                       UDP_CLIENT_PORT, udp_rx_callback);
+  udp_conn.udp_conn->ttl=10;
 
   PROCESS_END();
 }
