@@ -47,7 +47,6 @@ PROCESS_THREAD(udp_client_process, ev, data)
   static struct etimer periodic_timer;
   static char str[32];
   uip_ipaddr_t dest_ipaddr;
-  uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x709);
   static uint32_t tx_count;
   static uint32_t missed_tx_count;
 
@@ -56,7 +55,6 @@ PROCESS_THREAD(udp_client_process, ev, data)
   /* Initialize UDP connection */
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
                       UDP_SERVER_PORT, udp_rx_callback);
-  udp_conn.udp_conn->ttl=10;
 
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {

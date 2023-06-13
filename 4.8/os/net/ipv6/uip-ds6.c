@@ -762,7 +762,3 @@ uip_ds6_compute_reachable_time(void)
 /*---------------------------------------------------------------------------*/
 
 /** @}*/
-
-void uip_ds6_get_addr_iid(uip_ipaddr_t *ipaddr){
-  *ipaddr=loc_fipaddr;
-}

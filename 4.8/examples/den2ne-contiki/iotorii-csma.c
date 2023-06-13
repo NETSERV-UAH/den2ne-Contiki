@@ -88,6 +88,13 @@
 #define IOTORII_SHARE_START_TIME 8 //10 POR DEFECTO -> AUMENTAR EN CASO DE MAS DE 30 NODOS
 #endif
 
+//NÚMERO DE HELLOS HASTA QUE SE BORRE A ESE VECINO
+#ifdef IOTORII_CONF_MAX_HELLO_DIFF
+#define IOTORII_MAX_HELLO_DIFF IOTORII_CONF_MAX_HELLO_DIFF
+#else
+#define IOTORII_MAX_HELLO_DIFF 5
+#endif
+
 /*CUANDO TERMINA EL PRIMER PASO DE ENVÍO DE CARGAS (NODOS EDGE) COMIENZA EL SHARE TIMER PARA LOS NODOS EDGE.
 PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) EL SHARE_TIME > 2*LOAD_TIME*/
 
@@ -493,8 +500,19 @@ static void iotorii_handle_statistic_timer ()
           }
 }
 
-#endif
+//ELIMINA LOS VECINOS DE LOS CUALES NO SE HA RECIBIDO HELLO EN LOS ÚLTIMOS HELLO ENVIADOS
+void check_neighbours_hello (list_t list){
+	neighbour_table_entry_t *new_nb;
+	for (new_nb = list_head(list); new_nb != NULL; new_nb = new_nb->next)
+	{
+		if (number_of_hello_messages - new_nb->last_hello > IOTORII_MAX_HELLO_DIFF){
+			list_remove(list, new_nb);
+			number_of_neighbours--;
+		}
+	}
+}
 
+#endif
 
 static void iotorii_handle_hello_timer ()
 {
@@ -520,6 +538,10 @@ static void iotorii_handle_hello_timer ()
 	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 	#endif
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
+	
+	#if LOG_DBG_STATISTIC == 1
+	check_neighbours_hello(neighbour_table_entry_list);
+	#endif
 }
 
 
@@ -749,8 +771,12 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 		
 		for (new_nb = list_head(neighbour_table_entry_list); new_nb != NULL; new_nb = new_nb->next)
 		{
-			if (linkaddr_cmp(&(new_nb->addr), sender_addr))
+			if (linkaddr_cmp(&(new_nb->addr), sender_addr)){
 				address_is_in_table = 1; //SE PONE A 1 SI LA DIRECCIÓN DEL EMISOR SE ENCUENTRA EN LA LISTA
+				#if LOG_DBG_STATISTIC == 1
+				new_nb->last_hello=number_of_hello_messages; //Se actualiza el número de hellos enviados al recibir el hello
+				#endif
+			}
 		}
 		
 		if (!address_is_in_table) //SI NO ESTÁ EN LA LISTA
@@ -762,6 +788,7 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			new_nb->flag = 0;
 			new_nb->load = 0; //CARGA INICIAL NULA
 			new_nb->in_out = 0; //CARGA ENTRANTE O SALIENTE NULA AHORA
+			new_nb->last_hello=number_of_hello_messages; //GUARDA EL NÚMERO DE HELLOS ENVIADOS
 			
 			list_add(neighbour_table_entry_list, new_nb); //SE AÑADE A LA LISTA
 			
