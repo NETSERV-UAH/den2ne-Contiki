@@ -94,7 +94,7 @@
  * a Global ID of 0. For real deployments, make sure to install a pseudo-random
  * Global ID, e.g. in a RPL network, by configuring it at the root.
  */
-#define UIP_DS6_DEFAULT_PREFIX 0xfd00
+#define UIP_DS6_DEFAULT_PREFIX 0xfd03
 #endif /* UIP_CONF_DS6_DEFAULT_PREFIX */
 
 #define UIP_DS6_DEFAULT_PREFIX_0 ((UIP_DS6_DEFAULT_PREFIX >> 8) & 0xff)
@@ -386,5 +386,8 @@ uint32_t uip_ds6_compute_reachable_time(void); /** \brief compute random reachab
 #define uip_ds6_is_my_maddr(addr) (uip_ds6_maddr_lookup(addr) != NULL)
 #define uip_ds6_is_my_aaddr(addr) (uip_ds6_aaddr_lookup(addr) != NULL)
 /** @} */
+
+/** obtain local ip address */
+void uip_ds6_get_addr_iid(uip_ipaddr_t *ipaddr);
 
 #endif /* UIP_DS6_H_ */

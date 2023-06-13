@@ -24,6 +24,7 @@
 
 #include "net/ipv6/uip-ds6.h"
 #include "net/ipv6/uiplib.h"
+#include "net/ipv6/uip.h"
 
 /* Log configuration */
 
@@ -177,6 +178,7 @@ uint8_t edge_complete_load = 0; //INDICA A 1 QUE SE ACTIVA EN LA SEGUNDA VUELTA 
 static void iotorii_handle_sethlmac_timer ();
 #endif
 static void iotorii_handle_statistic_timer ();
+void iotorii_handle_incoming_hello_ipv6 (const uip_ipaddr_t *sender_addr);
 
 clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
 clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
@@ -201,7 +203,7 @@ udp_rx_callback(struct simple_udp_connection *c,
 	uiplib_ipaddr_snprint(sender_ip, size, sender_addr);
 	printf("Received response '%.*s' from %s\n", datalen, (char *) data, sender_ip);
 	if(!strcmp((char *)data, "hello"))
-		printf("Mensaje HELLO recibido\n");
+		iotorii_handle_incoming_hello_ipv6(sender_addr);
 }
 
 	
@@ -817,6 +819,53 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 }
 
 
+void iotorii_handle_incoming_hello_ipv6 (const uip_ipaddr_t *sender_addr) //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
+{
+
+       char *sender_ip=(char *) malloc (sizeof(char) * 32);
+       size_t size=32;
+       uiplib_ipaddr_snprint(sender_ip, size, sender_addr);
+       LOG_DBG("A Hello message received from %s\n", sender_ip);
+
+       if (number_of_neighbours < 256) //SI NO SE HA SUPERADO EL MÁXIMO DE ENTRADAS EN LA LISTA
+       {
+               uint8_t address_is_in_table = 0;
+               neighbour_table_entry_t_ipv6 *new_nb;
+               
+               for (new_nb = list_head(neighbour_table_entry_list); new_nb != NULL; new_nb = new_nb->next)
+               {
+                       if (uip_ip6addr_cmp(&(new_nb->addr), sender_addr))
+                               address_is_in_table = 1; //SE PONE A 1 SI LA DIRECCIÓN DEL EMISOR SE ENCUENTRA EN LA LISTA
+               }
+               
+               if (!address_is_in_table) //SI NO ESTÁ EN LA LISTA
+               {
+                       new_nb = (neighbour_table_entry_t_ipv6*) malloc (sizeof(neighbour_table_entry_t_ipv6)); //SE RESERVA ESPACIO
+                       new_nb->number_id = ++number_of_neighbours;
+                       number_of_neighbours_flag++;
+                       new_nb->addr = *sender_addr;
+                       new_nb->flag = 0;
+                       new_nb->load = 0; //CARGA INICIAL NULA
+                       new_nb->in_out = 0; //CARGA ENTRANTE O SALIENTE NULA AHORA
+                       
+                       list_add(neighbour_table_entry_list, new_nb); //SE AÑADE A LA LISTA
+                       
+                       LOG_DBG("A new neighbour added to IoTorii neighbour table, address: %s, ID: %d\n", sender_ip, new_nb->number_id);
+                       
+                       printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
+
+               }
+               else
+               {
+                       LOG_DBG("Address of hello (%s) message received already!\n", sender_ip);
+                       printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
+               }
+       }
+       else //TABLA LLENA (256)
+               LOG_WARN("The IoTorii neighbour table is full! \n");    
+}
+
+
 void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
 {
 	LOG_DBG("A message received from ");
@@ -992,6 +1041,9 @@ static void iotorii_handle_sethlmac_timer ()
 	hlmacaddr_t root_addr; //SE CREA EL ROOT
 	hlmac_create_root_addr(&root_addr, 1);
 	hlmactable_add(root_addr, timestamp);
+	
+	uip_ipaddr_t *local_addr;
+        uip_ds6_get_addr_iid(local_addr);
 	
 	#if LOG_DBG_STATISTIC == 1
 	//printf("Periodic Statistics: node_id: %u, convergence_time_start\n", node_id);
