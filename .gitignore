@@ -1,5 +1,9 @@
-4.8/*/[root,common-node]/build
-4.8/*/[root,common-node]/*.native
+4.8/examples/den2ne-ipv6/root/*.native
+4.8/examples/den2ne-ipv6/common-node/*.native
+4.8/examples/den2ne-ipv6/*/build
+4.8/examples/den2ne-contiki/root/*.native
+4.8/examples/den2ne-contiki/common-node/*.native
+4.8/examples/den2ne-contiki/*/build
 4.8/CODE_OF_CONDUCT.md
 4.8/CONTRIBUTING.md
 4.8/LICENSE.md
@@ -21,3 +25,4 @@
 4.8/examples/Root*
 4.8/examples/[test-common,test-root,udp_trial]
 *cooja*
+*.vscode

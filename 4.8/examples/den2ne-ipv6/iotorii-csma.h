@@ -21,7 +21,7 @@
 #ifdef IOTORII_CONF_NODE_TYPE
 #define IOTORII_NODE_TYPE IOTORII_CONF_NODE_TYPE
 #else
-#define IOTORII_NODE_TYPE 0 //To support the traditional MAC operation
+#define IOTORII_NODE_TYPE 1 //To support the traditional MAC operation
 #endif
 
 #ifdef CSMA_CONF_SEND_SOFT_ACK

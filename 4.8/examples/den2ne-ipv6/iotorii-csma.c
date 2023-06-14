@@ -591,6 +591,43 @@ void iotorii_handle_send_sethlmac_timer ()
 	printf("INICIO CONVERGENCIA\n");
 }
 
+void iotorii_handle_send_sethlmac_timer_ipv6 ()
+{
+	payload_entry_t *payload_entry;
+	payload_entry = list_pop(payload_entry_list); //POP PACKETBUF DE LA COLA
+	
+	if (payload_entry) //EXISTE LA ENTRADA PAYLOAD
+	{			
+		//SE ENVÍA EL MENSAJE A TRAVÉS DE IPv6
+		udp_conn.udp_conn->lport=15650;
+		simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr);
+		printf("//INFO HANDLE HLMAC// Mensaje HLMAC enviado\n");
+
+		//SE LIBERA MEMORIA
+		free(payload_entry->payload);
+		payload_entry->payload = NULL;
+		free(payload_entry);
+		payload_entry = NULL;
+
+		number_of_sethlmac_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES SETHLMAC
+		
+		if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
+		{
+			//SE PLANIFICA EL SIGUIENTE MENSAJE
+			clock_time_t sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 128);
+			sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
+			
+			#if LOG_DBG_DEVELOPER == 1
+			LOG_DBG("Scheduling a SetHLMAC message after %u ticks in the future\n", (unsigned)sethlmac_delay_time);
+			#endif
+			
+			ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer_ipv6, NULL);
+		}
+	}
+	
+	printf("INICIO CONVERGENCIA\n");
+}
+
 
 void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, uint32_t timestamp)
 {
@@ -689,9 +726,6 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				
 				packetbuf_ptr += addr.len;
 				datalen_counter += addr.len;
-				
-				//SE PREPARA EL ENVÍO A TRAVÉS DE IPv6
-				snprintf(str, sizeof(str), "%" PRIu32 "%" PRIu32, timestamp, addr.len);
 
 				do
 				{
@@ -707,11 +741,6 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 
 					i++;
 				} while (mac_max_payload >= (datalen_counter + LINKADDR_SIZE + 1) && i <= number_of_neighbours_new);
-				
-				//SE ENVÍA EL MENSAJE A TRAVÉS DE IPv6
-				udp_conn.udp_conn->lport=15650;
-				simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
-				printf("//INFO HANDLE HELLO// Mensaje Hello enviado\n");
 
 				//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
 				payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
@@ -735,7 +764,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					#endif
 					
 					list_add(payload_entry_list, payload_entry); //SE AÑADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
-					ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL); //SET TIMER
+					ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer_ipv6, NULL); //SET TIMER
 				}
 				else //SI NO ESTÁ VACÍA NO SE CONFIGURA EL TIEMPO Y DIRECTAMENTE SE AÑADE LA ENTRADA DE PAYLOAD
 					list_add(payload_entry_list, payload_entry);
@@ -1120,7 +1149,7 @@ static void init (void)
 	#endif
 	
 	
-        uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x709);
+        uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x708);
         simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);
         udp_conn.udp_conn->ttl=10;
 }

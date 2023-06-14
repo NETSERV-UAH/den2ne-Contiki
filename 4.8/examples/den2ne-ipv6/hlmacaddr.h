@@ -12,7 +12,7 @@
 #endif
 
 #ifndef LOG_CONF_DBG_STATISTIC
-#define LOG_DBG_STATISTIC 0
+#define LOG_DBG_STATISTIC 1
 #else
 #define LOG_DBG_STATISTIC LOG_CONF_DBG_STATISTIC
 #endif
