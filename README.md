@@ -1,5 +1,27 @@
-Para ejecutar, insertar directorio 4.8 dentro de 'examples' con el flag 'WERROR' a 0 dentro de 'Makefile.include'.
+Den2ne-Contiki
+==========================
 
-Los mensajes Hello se envían cada 2 s hasta recibir primera respuesta. Después, cada 60 s (aún sin actualizar la ausencia de vecinos detectados previamente). Si se recibe un Hello de un nodo nuevo, se responde y, si el root está al alcance, le asgina hlmac (nodos comunes todavía no).
+## Introducción
 
-Envío de estadísticas todavía sin funcionar correctamente.
+En este repositorio se encuentra la implementación del algoritmo utilizando la plataforma Contiki. En el directorio '4.8' se encuentran los proyectos para la versión 4.8 de Contiki. En él existen 2 implementaciones del algoritmo, una utilizando IPv6 (den2ne-ipv6) y otro solamente con las modificaciones sobre el funcionamiento respecto al código original.
+
+
+## Instrucciones de uso
+
+### Ejecutable
+
+Para utilizar la implementación mediante IPv6 del nodo root, debemos ejecutar los siguientes comandos:
+
+        cd ./4.8/examples/den2ne-ipv6/root/
+        rm -rf build/ *.native
+        make
+        sudo ./iotorii-root.native
+
+Para utilizar la implementación mediante IPv6 del nodo común, debemos ejecutar los siguientes comandos:
+
+        cd ./4.8/examples/den2ne-ipv6/common-node/
+        rm -rf build/ *.native
+        make
+        sudo ./iotorii-common.native
+
+### Configuración de la red
