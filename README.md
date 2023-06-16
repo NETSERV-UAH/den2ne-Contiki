@@ -28,7 +28,7 @@ Para utilizar la implementación mediante IPv6 del nodo común, debemos ejecutar
 
 Raspberry 1: 
 - Contiki: fd03::…:708   &emsp; (~/contiki-ng/arch/platform/native/platform.c:120)
-- tun0: fd03::2          &emsp;&emsp;&emsp;&emsp;&ensp; (~/contiki-ng/arch/cpu/native/net/tun6net.c)
+- tun0: fd03::2          &emsp;&emsp;&emsp;&emsp;&ensp; (~/contiki-ng/arch/cpu/native/net/tun6net.c:70)
 - wlan0: fd03::20        &emsp;&emsp;&emsp;&nbsp; (archivo /etc/network/interfaces)
 
 Raspberry 2: 
