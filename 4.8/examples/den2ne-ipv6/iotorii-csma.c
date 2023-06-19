@@ -95,6 +95,13 @@
 #define IOTORII_SHARE_START_TIME 8 //10 POR DEFECTO -> AUMENTAR EN CASO DE MAS DE 30 NODOS
 #endif
 
+//MAX PAYLOAD DE LOS MENSAJES SETHLMAC IPv6
+#ifdef IPv6_MAX_PAYLOAD_CONF
+#define IPv6_MAX_PAYLOAD IPv6_MAX_PAYLOAD_CONF
+#else
+#define IPv6_MAX_PAYLOAD 2048 //10 POR DEFECTO -> AUMENTAR EN CASO DE MAS DE 30 NODOS
+#endif
+
 /*CUANDO TERMINA EL PRIMER PASO DE ENVÍO DE CARGAS (NODOS EDGE) COMIENZA EL SHARE TIMER PARA LOS NODOS EDGE.
 PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) EL SHARE_TIME > 2*LOAD_TIME*/
 
@@ -326,7 +333,7 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 	return prefix;
 }
 
-hlmacaddr_t *iotorii_extract_address_ipv6 (const uint8_t *data, uint16_t datalen) //SE EXTRAE LA DIRECCIÓN DEL NODO EMISOR A PARTIR DEL PAQUETE RECIBIDO
+hlmacaddr_t *iotorii_extract_address_ipv6 (const uip_ipaddr_t *sender_addr, const uint8_t *data, uint16_t datalen) //SE EXTRAE LA DIRECCIÓN DEL NODO EMISOR A PARTIR DEL PAQUETE RECIBIDO
 {	
 	uint8_t *packetbuf_ptr = data; //PUNTERO A COPIA DEL BUFFER
 	int datalen_counter = 0;
@@ -334,7 +341,10 @@ hlmacaddr_t *iotorii_extract_address_ipv6 (const uint8_t *data, uint16_t datalen
 	
 	uint8_t id = 0;
 	hlmacaddr_t *prefix = NULL;
-	linkaddr_t link_address = linkaddr_null;
+    uip_ipaddr_t *node_addr;
+	uip_ip6addr(node_addr, 0,0,0,0,0,0,0,0);
+	uip_ipaddr_t *local_addr;
+    uip_ds6_get_addr_iid(local_addr);
 	uint8_t is_first_record = 1;  
 
 	//SE LEE EL PAYLOAD
@@ -344,7 +354,7 @@ hlmacaddr_t *iotorii_extract_address_ipv6 (const uint8_t *data, uint16_t datalen
 	* | Timestamp | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
 	* +-----------+------------+--------+-----+------+-----+-----+------+ -------->*/
 	
-	while (datalen_counter < datalen && !linkaddr_cmp(&link_address, &linkaddr_node_addr))
+	while (datalen_counter < datalen && !uip_ip6addr_cmp(node_addr, local_addr))
 	{
 		if (is_first_record) //SI ES EL PRIMER RECORD DEL PAYLOAD SE INCLUYE EL PREFIJO Y LA LONGITUD DE ESTE
 		{
@@ -371,13 +381,13 @@ hlmacaddr_t *iotorii_extract_address_ipv6 (const uint8_t *data, uint16_t datalen
 		packetbuf_ptr++;
 		datalen_counter++;
 
-		memcpy(&link_address, packetbuf_ptr, LINKADDR_SIZE); //COPIA DIRECCIÓN MAC DEL VECINO
+		memcpy(node_addr, packetbuf_ptr, 128); //COPIA DIRECCIÓN MAC DEL VECINO
 		
-		packetbuf_ptr += LINKADDR_SIZE;
-		datalen_counter += LINKADDR_SIZE;
+		packetbuf_ptr += 128;
+		datalen_counter += 128;
 	} 
 		
-	if (linkaddr_cmp(&link_address, &linkaddr_node_addr))
+	if (uip_ip6addr_cmp(node_addr, local_addr))
 	{
 		hlmac_add_new_id(prefix, id); //SE AÑADE ID A LA DIRECCIÓN DEL PREFIJO
 		return prefix;  
@@ -620,7 +630,6 @@ static void iotorii_handle_hello_timer ()
 	#endif
 		
 	#if IOTORII_NODE_TYPE == 1 //ROOT
-	//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA (LOS TIMERS SE SOBREESCRIBEN)
 	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 	#endif
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
@@ -710,7 +719,7 @@ void iotorii_handle_send_sethlmac_timer_ipv6 ()
 
 void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, uint32_t timestamp)
 {
-	int mac_max_payload = max_payload();
+	int mac_max_payload = IPv6_MAX_PAYLOAD;
 	
 	if (mac_max_payload <= 0) //FRAMING HA FALLADO Y SETHLMAC NO SE PUEDE CREAR
 	   LOG_WARN("output: failed to calculate payload size - SetHLMAC can not be created\n");
@@ -878,13 +887,13 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 
 void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_addr, uint32_t timestamp)
 {
-	int mac_max_payload = max_payload();
+	int mac_max_payload = IPv6_MAX_PAYLOAD;
 
 	neighbour_table_entry_t_ipv6 *neighbour_entry;
 
 	#if LOG_DBG_DEVELOPER == 1 
 	LOG_DBG("Info before sending SetHLMAC: ");
-	LOG_DBG("Number of neighbours: %d, mac_max_payload: %d, LINKADDR_SIZE: %d.\n", number_of_neighbours, mac_max_payload, LINKADDR_SIZE);
+	LOG_DBG("Number of neighbours: %d, mac_max_payload: %d.\n", number_of_neighbours, mac_max_payload);
 	#endif
 
 	uint8_t number_of_neighbours_new = number_of_neighbours;
@@ -943,7 +952,7 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 
 		//SE ACOMODAN LAS DIRECCIONES SETHLMAC EN EL PAYLOAD
 		//SI EL NODO TIENE VECINOS PARA ENVIAR MENSAJE SETHLMAC Y EL PAYLOAD ES MEÑOR AL MÁXIMO PAYLOAD 
-		if (random_list[i-1] && (mac_max_payload >= (addr.len + 2 + LINKADDR_SIZE))) //2 = LONGITUD DEL PREFIJO DE DIRECCIÓN HLMAC(1) + ID(1)
+		if (random_list[i-1] && (mac_max_payload >= (addr.len + 2 + 128))) //2 = LONGITUD DEL PREFIJO DE DIRECCIÓN HLMAC(1) + ID(1)
 		{
 			//SE CREA UNA COPIA DE PACKETBUF ANTES DE EMPEZAR EL PROCESO PARA QUE NO SE SOBREESCRIBA AL ENVIAR MENSAJES SETHLMAC
 			packetbuf_ptr_head = (uint8_t *) malloc (sizeof(uint8_t) * mac_max_payload);
@@ -976,13 +985,13 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 				packetbuf_ptr++;
 				datalen_counter++;
 				
-				memcpy(packetbuf_ptr, &(random_list[i-1]->addr), LINKADDR_SIZE); //COPIA DIRECCIÓN MAC DE VECINO
+				memcpy(packetbuf_ptr, &(random_list[i-1]->addr), 128); //COPIA DIRECCIÓN MAC DE VECINO
 				
-				packetbuf_ptr += LINKADDR_SIZE;
-				datalen_counter += LINKADDR_SIZE;
+				packetbuf_ptr += 128;
+				datalen_counter += 128;
 
 				i++;
-			} while (mac_max_payload >= (datalen_counter + LINKADDR_SIZE + 1) && i <= number_of_neighbours_new);
+			} while (mac_max_payload >= (datalen_counter + 128 + 1) && i <= number_of_neighbours_new);
 
 			//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
 			payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
@@ -1294,7 +1303,7 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 	LOG_DBG("A message received from %s\n", sender_ip);
 
 	hlmacaddr_t *received_hlmac_addr;
-	received_hlmac_addr = iotorii_extract_address_ipv6(data, datalen); //SE COGE LA DIRECCIÓN RECIBIDA
+	received_hlmac_addr = iotorii_extract_address_ipv6(sender_addr, data, datalen); //SE COGE LA DIRECCIÓN RECIBIDA
 	uint32_t timestamp = iotorii_extract_timestamp_ipv6(data); //SE COGE EL TIMESTAMP RECIBIDA
 	
 	neighbour_table_entry_t_ipv6 *nb;	
@@ -1496,7 +1505,7 @@ static void init (void)
 	#if IOTORII_NODE_TYPE > 0 //ROOT O NODO COMÚN
 
 	unsigned short seed_number;
-	uint8_t min_len_seed = sizeof(unsigned short) < LINKADDR_SIZE ?  sizeof(unsigned short) : LINKADDR_SIZE;
+	uint8_t min_len_seed = sizeof(unsigned short) < 128 ?  sizeof(unsigned short) : 128;
 	
 	memcpy(&seed_number, &linkaddr_node_addr, min_len_seed);
 	random_init(seed_number); //SE INICIALIZA UN SEED NUMBER DIFERENTE PARA CADA NODO
