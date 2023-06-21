@@ -214,6 +214,7 @@ udp_rx_callback(struct simple_udp_connection *c,
 		iotorii_handle_incoming_hello_ipv6(sender_addr);
 	else
 		iotorii_handle_incoming_sethlmac_or_load_ipv6(sender_addr, data, datalen);
+	free(sender_ip);
 }
 
 	
@@ -348,8 +349,9 @@ hlmacaddr_t *iotorii_extract_address_ipv6 (const uip_ipaddr_t *sender_addr, cons
 	uip_ip6addr(&node_addr, 0,0,0,0,0,0,0,0);
 	uiplib_ipaddr_snprint(sender_ip, size, &node_addr);
 	uip_ipaddr_t local_addr;
-    //uip_ds6_get_addr_iid(&local_addr);
-    uip_ip6addr(&local_addr, 0xFD03,0,0,0,0x302,0x304,0x506,0x708);
+    //uip_ds6_get_addr_iid(local_addr);
+	uip_ds6_select_src(&local_addr, &dest_ipaddr);
+    //uip_ip6addr(&local_addr, 0xFD03,0,0,0,0x302,0x304,0x506,0x708);
 	uiplib_ipaddr_snprint(sender_ip, size, &local_addr);
 	uint8_t is_first_record = 1;
 
@@ -1160,6 +1162,7 @@ void iotorii_handle_incoming_hello_ipv6 (const uip_ipaddr_t *sender_addr) //PROC
 	}
 	else //TABLA LLENA (256)
 			LOG_WARN("The IoTorii neighbour table is full! \n");
+	free(sender_ip);
 }
 
 
@@ -1484,7 +1487,8 @@ static void iotorii_handle_sethlmac_timer ()
 	hlmactable_add(root_addr, timestamp);
 	
 	uip_ipaddr_t local_addr;
-    uip_ds6_get_addr_iid(&local_addr);
+    //uip_ds6_get_addr_iid(local_addr);
+	uip_ds6_select_src(&local_addr, &dest_ipaddr);
 	
 	#if LOG_DBG_STATISTIC == 1
 	//printf("Periodic Statistics: node_id: %u, convergence_time_start\n", node_id);
