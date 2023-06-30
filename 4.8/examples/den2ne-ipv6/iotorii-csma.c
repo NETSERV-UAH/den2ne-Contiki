@@ -199,7 +199,7 @@ int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 static struct simple_udp_connection udp_conn;
 static uint32_t rx_count = 0;
 static char str[32];
-uip_ipaddr_t dest_ipaddr;
+uip_ipaddr_t dest_ipaddr, dest_ipaddr2, dest_ipaddr3;
 static void
 udp_rx_callback(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
@@ -488,6 +488,8 @@ void iotorii_handle_load_timer_ipv6 ()
 
 		udp_conn.udp_conn->lport=15650;
 		simple_udp_sendto(&udp_conn, &(node->load), sizeof(node->load), &dest_ipaddr);
+		simple_udp_sendto(&udp_conn, &(node->load), sizeof(node->load), &dest_ipaddr2);
+		simple_udp_sendto(&udp_conn, &(node->load), sizeof(node->load), &dest_ipaddr3);
 		printf("//INFO HANDLE LOAD// Mensaje Load enviado\n");
 	}
 }
@@ -604,18 +606,21 @@ void iotorii_handle_share_upstream_timer_ipv6 ()
 			if (nb->flag == 1)
 			{
 				nb->in_out = -extra_load;
-				// packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
+				packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
 				
-				// memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
+				memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
 				// packetbuf_set_datalen(sizeof(extra_load));									
 				// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 					
-				udp_conn.udp_conn->lport=15650;
-				simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr);
 				printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\n", node->load);
 				printf("//INFO HANDLE SHARE UP// Carga informada: %d\n", extra_load); 
 			}	
-		}		
+		}
+		
+		udp_conn.udp_conn->lport=15650;
+		simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr);
+		simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr2);
+		simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr3);	
 	}
 	
 	start_share = 1; // ANTES
@@ -812,6 +817,8 @@ static void iotorii_handle_hello_timer ()
 {	
 	udp_conn.udp_conn->lport=15650;
 	simple_udp_sendto(&udp_conn, "hello", strlen("hello"), &dest_ipaddr);
+	simple_udp_sendto(&udp_conn, "hello", strlen("hello"), &dest_ipaddr2);
+	simple_udp_sendto(&udp_conn, "hello", strlen("hello"), &dest_ipaddr3);
 	printf("//INFO HANDLE HELLO// Mensaje Hello enviado\n");
 	
 	#if LOG_DBG_STATISTIC == 1
@@ -880,6 +887,8 @@ void iotorii_handle_send_sethlmac_timer_ipv6 ()
 		//SE ENVÍA EL MENSAJE A TRAVÉS DE IPv6
 		udp_conn.udp_conn->lport=15650;
 		simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr);
+		simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr2);
+		simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr3);
 		printf("//INFO HANDLE HLMAC// Mensaje HLMAC enviado\n");
 
 		//SE LIBERA MEMORIA
@@ -1195,6 +1204,8 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 			//SE ENVÍA EL MENSAJE A TRAVÉS DE IPv6
 			udp_conn.udp_conn->lport=15650;
 			simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr);
+			simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr2);
+			simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr3);
 			printf("//INFO HANDLE HLMAC// Mensaje HLMAC enviado\n");
 			
 			if (!list_head(payload_entry_list)) //ANTES DE AÑADIR LA ENTRADA DE PAYLOAD A LA LISTA SE COMPRUEBA SI LA LISTA ESTA VACÍA PARA CONFIGURAR EL TIEMPO
@@ -1505,7 +1516,7 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 	uint32_t timestamp = iotorii_extract_timestamp_ipv6(data); //SE COGE EL TIMESTAMP RECIBIDA
 	
 	neighbour_table_entry_t_ipv6 *nb;	
-	this_node_t *node;
+	this_node_t *node;  
 	node = list_head(node_list);
 
 	if (hlmac_is_unspecified_addr(*received_hlmac_addr)) //SI NO SE ESPECIFICA DIRECCIÓN, NO HAY PARA EL NODO
@@ -1583,6 +1594,19 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 		{
 			uint8_t is_added = hlmactable_add(*received_hlmac_addr, timestamp);
 
+			//BÚSQUEDA DE LA DIRECCIÓN DEL EMISOR EN LA LISTA DE VECINOS 
+			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+			{
+				if (uip_ip6addr_cmp(&(nb->addr), sender_addr))
+				{
+					if (is_added)
+						nb->flag = 1; //SE MARCA COMO PADRE ESE VECINO 
+					else
+						nb->flag = -1; //SE MARCA COMO PADRE ESE VECINO PERO SIN UNIÓN DE PADRE
+				}
+			}
+			number_of_neighbours_flag--; //SE DECREMENTA EL NÚMERO DE VECINOS DE LOS QUE NO SE HA RECIBIDO HLMAC
+
 			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
 			{					
 				LOG_DBG("New HLMAC address is assigned to the node.\n");
@@ -1601,19 +1625,6 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 				free(received_hlmac_addr);
 				received_hlmac_addr = NULL;
 			}
-			
-			//BÚSQUEDA DE LA DIRECCIÓN DEL EMISOR EN LA LISTA DE VECINOS 
-			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
-			{
-				if (uip_ip6addr_cmp(&(nb->addr), sender_addr))
-				{
-					if (is_added)
-						nb->flag = 1; //SE MARCA COMO PADRE ESE VECINO 
-					else
-						nb->flag = -1; //SE MARCA COMO PADRE ESE VECINO PERO SIN UNIÓN DE PADRE
-				}
-			}
-			number_of_neighbours_flag--; //SE DECREMENTA EL NÚMERO DE VECINOS DE LOS QUE NO SE HA RECIBIDO HLMAC
 		}
 		else
 		{
@@ -1743,6 +1754,8 @@ static void init (void)
 	
 	
         uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x708);
+        uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x710);
+        uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x711);
         simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);
         udp_conn.udp_conn->ttl=10;
 }
