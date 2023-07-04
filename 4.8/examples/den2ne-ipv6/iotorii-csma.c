@@ -561,7 +561,7 @@ void iotorii_handle_share_upstream_timer_ipv6 ()
 	this_node_t *node;
 	node = list_head(node_list); 
 	
-	neighbour_table_entry_t *nb;
+	neighbour_table_entry_t_ipv6 *nb;
 	nb = list_head(neighbour_table_entry_list);
 	
 	msg_share_on = 1;
