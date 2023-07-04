@@ -208,15 +208,10 @@ udp_rx_callback(struct simple_udp_connection *c,
          uint16_t receiver_port,
          const uint8_t *data,
          uint16_t datalen){
-	char *sender_ip=(char *) malloc (sizeof(char) * 32);
-	size_t size=32;
-	uiplib_ipaddr_snprint(sender_ip, size, sender_addr);
-	printf("Received response '%.*s' from %s\n", datalen, (char *) data, sender_ip);
-	if(!strcmp((char *)data, "hello"))
+	if(datalen==5)
 		iotorii_handle_incoming_hello_ipv6(sender_addr);
 	else
 		iotorii_handle_incoming_sethlmac_or_load_ipv6(sender_addr, data, datalen);
-	free(sender_ip);
 }
 
 	
@@ -727,7 +722,7 @@ static void iotorii_handle_statistic_timer_ipv6 ()
 	
 	this_node_t *node;
 	node = list_head(node_list); 
-	neighbour_table_entry_t *nb;
+	neighbour_table_entry_t_ipv6 *nb;
 	
 	if(node!=NULL){
 		if (start_share == 0 && msg_share_on == 0)
@@ -1565,11 +1560,11 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 						{
 							new_edge = 1; //PARA SEGUIR EL ÁRBOL
 							#if LOG_DBG_STATISTIC == 1
-							ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
+								ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
 							#endif
 
 							#if IOTORII_NODE_TYPE == 1
-							printf("FIN CONVERGENCIA\n");
+								printf("FIN CONVERGENCIA\n");
 							#endif
 						}						
 					}
@@ -1599,10 +1594,13 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 			{
 				if (uip_ip6addr_cmp(&(nb->addr), sender_addr))
 				{
+					int flag = -1;
 					if (is_added)
-						nb->flag = 1; //SE MARCA COMO PADRE ESE VECINO 
-					else
-						nb->flag = -1; //SE MARCA COMO PADRE ESE VECINO PERO SIN UNIÓN DE PADRE
+						flag = 1;
+					// 	nb->flag = 1; //SE MARCA COMO PADRE ESE VECINO 
+					// else
+					// 	nb->flag = -1; //SE MARCA COMO PADRE ESE VECINO PERO SIN UNIÓN DE PADRE
+					memcpy(&nb->flag, &flag, sizeof(flag));
 				}
 			}
 			number_of_neighbours_flag--; //SE DECREMENTA EL NÚMERO DE VECINOS DE LOS QUE NO SE HA RECIBIDO HLMAC
