@@ -601,21 +601,21 @@ void iotorii_handle_share_upstream_timer_ipv6 ()
 			if (nb->flag == 1)
 			{
 				nb->in_out = -extra_load;
-				packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
+				// packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
 				
-				memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
+				// memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
 				// packetbuf_set_datalen(sizeof(extra_load));									
 				// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 					
 				printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\n", node->load);
-				printf("//INFO HANDLE SHARE UP// Carga informada: %d\n", extra_load); 
+				printf("//INFO HANDLE SHARE UP// Carga informada: %d\n", extra_load);
+
+				udp_conn.udp_conn->lport=15650;
+				simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr);
+				simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr2);
+				simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr3);	
 			}	
-		}
-		
-		udp_conn.udp_conn->lport=15650;
-		simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr);
-		simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr2);
-		simple_udp_sendto(&udp_conn, &(extra_load), sizeof(extra_load), &dest_ipaddr3);	
+		}	
 	}
 	
 	start_share = 1; // ANTES
@@ -1198,9 +1198,22 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 
 			//SE ENVÍA EL MENSAJE A TRAVÉS DE IPv6
 			udp_conn.udp_conn->lport=15650;
-			simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr);
-			simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr2);
-			simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &dest_ipaddr3);
+			#if IOTORII_NODE_TYPE > 1
+				uip_ipaddr_t addr_emisor_aux = *sender_addr; //NECESARIA YA QUE AL ENVIAR UN MENSAJE SE SOBREESCRIBE LA VARIABLE sender_addr
+				for (neighbour_entry = list_head(neighbour_table_entry_list); neighbour_entry != NULL; neighbour_entry = list_item_next(neighbour_entry))
+				{			
+					if (!uip_ip6addr_cmp(&neighbour_entry->addr, &addr_emisor_aux)) //SE ENVÍA A TODOS LOS NODOS EXCEPTO AL EMISOR
+					{
+						simple_udp_sendto(&udp_conn, payload_entry->payload, payload_entry->data_len, &neighbour_entry->addr);
+					}
+				}
+			#endif
+			#if IOTORII_NODE_TYPE == 1
+				uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x709);
+				uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x710);
+				uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x711);
+			#endif
+
 			printf("//INFO HANDLE HLMAC// Mensaje HLMAC enviado\n");
 			
 			if (!list_head(payload_entry_list)) //ANTES DE AÑADIR LA ENTRADA DE PAYLOAD A LA LISTA SE COMPRUEBA SI LA LISTA ESTA VACÍA PARA CONFIGURAR EL TIEMPO
@@ -1218,7 +1231,10 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 				#endif
 				
 				list_add(payload_entry_list, payload_entry); //SE AÑADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
-				ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer_ipv6, NULL); //SET TIMER
+
+				#if IOTORII_NODE_TYPE == 1
+					ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer_ipv6, NULL); //SET TIMER
+				#endif
 			}
 			else //SI NO ESTÁ VACÍA NO SE CONFIGURA EL TIEMPO Y DIRECTAMENTE SE AÑADE LA ENTRADA DE PAYLOAD
 				list_add(payload_entry_list, payload_entry);
@@ -1526,7 +1542,7 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 				if (uip_ip6addr_cmp(&(nb->addr), sender_addr)) //SE BUSCA EN LA LISTA DE VECINOS LA DIRECCIÓN QUE HA ENVIADO EL MENSAJE 
 				{
 					memcpy(&nb->load, data, datalen); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
-					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\n", *p_load, sender_ip);
+					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo %s\n", *p_load, sender_ip);
 					#if LOG_DBG_STATISTIC == 1
 					ctimer_set(&statistic_timer, 0, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS AUTOMÁTICAMENTE
 					#endif
