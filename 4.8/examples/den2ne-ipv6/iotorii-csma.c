@@ -173,8 +173,8 @@ uint8_t start_share = 0;
 uint8_t msg_share_on = 0;
 uint8_t new_edge = 0; //MARCA COMO EDGE UN NODO NO EDGE QUE YA HA REPARTIDO SU CARGA
 
-int extra_load = 0; //INDICA CUANTA CARGA SOBRA SI UN NODO TIENE UNA CANTIDAD MAYOR A 100 
-int new_extra_load = 0; //INDICA CUANTA CARGA DEL TOTAL SOBRANTE SE ENVÍA AL PADRE
+uint16_t extra_load = 0; //INDICA CUANTA CARGA SOBRA SI UN NODO TIENE UNA CANTIDAD MAYOR A 100 
+uint16_t new_extra_load = 0; //INDICA CUANTA CARGA DEL TOTAL SOBRANTE SE ENVÍA AL PADRE
 
 uint8_t edge_complete_load = 0; //INDICA A 1 QUE SE ACTIVA EN LA SEGUNDA VUELTA LA RECEPCIÓN DE CARGA EN LOS EDGE PARA CONSEGUIR CARGA = 100
 
@@ -1349,15 +1349,13 @@ void iotorii_handle_incoming_hello_ipv6 (const uip_ipaddr_t *sender_addr) //PROC
 			list_add(neighbour_table_entry_list, new_nb); //SE AÑADE A LA LISTA
 			
 			LOG_DBG("A new neighbour added to IoTorii neighbour table, address: %s, ID: %d\n", sender_ip, new_nb->number_id);
-			
-			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
 
-			}
-			else
-			{
-				LOG_DBG("Address of hello (%s) message received already!\n", sender_ip);
-				printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
-			}
+		}
+		else
+		{
+			LOG_DBG("Address of hello (%s) message received already!\n", sender_ip);
+		}
+		printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
 	}
 	else //TABLA LLENA (256)
 			LOG_WARN("The IoTorii neighbour table is full! \n");
@@ -1532,9 +1530,10 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 
 	if (hlmac_is_unspecified_addr(*received_hlmac_addr)) //SI NO SE ESPECIFICA DIRECCIÓN, NO HAY PARA EL NODO
 	{		
-		if (start_load == 1 && msg_share_on == 0)
+		// if (start_load == 1 && msg_share_on == 0)
+		if (datalen == 4) //LOAD
 		{			
-			uint8_t *p_load = (uint8_t *) malloc (sizeof(uint8_t));
+			int *p_load = (int *) malloc (sizeof(int));
 			memcpy(p_load, data, datalen); //COPIA DEL BUFFER 
 			
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
@@ -1553,9 +1552,10 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 			p_load = NULL;
 		}
 		
-		else if (msg_share_on == 1)
+		// else if (msg_share_on == 1)
+		else if (datalen == 2) //SHARE
 		{			
-			int *p_extra = (int *) malloc (sizeof(int));
+			uint16_t *p_extra = (uint16_t *) malloc (sizeof(uint16_t));
 			memcpy(p_extra, data, datalen); //COPIA DEL BUFFER LA CARGA SOBRANTE QUE HA ENVIADO EL NODO
 			
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
@@ -1619,10 +1619,10 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 					memcpy(&nb->flag, &flag, sizeof(flag));
 				}
 			}
-			number_of_neighbours_flag--; //SE DECREMENTA EL NÚMERO DE VECINOS DE LOS QUE NO SE HA RECIBIDO HLMAC
 
 			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
-			{					
+			{			
+				number_of_neighbours_flag = number_of_neighbours; //SE RESETEA PARA CADA ASIGNACIÓN DE HLMAC
 				LOG_DBG("New HLMAC address is assigned to the node.\n");
 				LOG_DBG("New HLMAC address is sent to the neighbours.\n");
 				iotorii_send_sethlmac_ipv6(*received_hlmac_addr, sender_addr, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
@@ -1639,6 +1639,8 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 				free(received_hlmac_addr);
 				received_hlmac_addr = NULL;
 			}
+
+			number_of_neighbours_flag--; //SE DECREMENTA EL NÚMERO DE VECINOS DE LOS QUE NO SE HA RECIBIDO HLMAC
 		}
 		else
 		{
