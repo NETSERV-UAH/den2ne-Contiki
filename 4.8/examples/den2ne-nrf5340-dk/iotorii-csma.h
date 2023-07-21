@@ -14,8 +14,6 @@
 #include "net/mac/mac.h"
 #include "dev/radio.h"
 
-#include "net/ipv6/uip.h"
-
 /*---------------------------------------------------------------------------*/
 
 #ifdef IOTORII_CONF_NODE_TYPE
@@ -57,26 +55,14 @@ struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA
 {
 	struct neighbour_table_entry *next;
 	linkaddr_t addr;
+	uint32_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
 	uint8_t number_id;
 	int flag; //FLAG PADRE/HIJO OUTPUT/INPUT
-	uint8_t load; //CARGA DE CADA NODO
+	uint16_t load; //CARGA DE CADA NODO
 	uint16_t in_out; //PUERTOS DE CARGA IN/OUT
 };
 
 typedef struct neighbour_table_entry neighbour_table_entry_t;
-
-struct neighbour_table_entry_ipv6 //ESTRUCTURA DE ENTRADA DE TABLA
-{
-       struct neighbour_table_entry_ipv6 *next;
-       uip_ipaddr_t addr;
-	   uint32_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
-       uint8_t number_id;
-       int flag; //FLAG PADRE/HIJO OUTPUT/INPUT
-       uint16_t load; //CARGA DE CADA NODO
-       uint16_t in_out; //PUERTOS DE CARGA IN/OUT
-};
-
-typedef struct neighbour_table_entry_ipv6 neighbour_table_entry_t_ipv6;
 
 /* just a default - with LLSEC, etc */
 #define CSMA_MAC_MAX_HEADER 21
@@ -102,6 +88,7 @@ int csma_security_set_key (uint8_t index, const uint8_t *key);
 
 //adicional
 char *link_addr_to_str (const linkaddr_t addr, int length);
+
 
 #endif /* IOTORII_CSMA_H_ */
 

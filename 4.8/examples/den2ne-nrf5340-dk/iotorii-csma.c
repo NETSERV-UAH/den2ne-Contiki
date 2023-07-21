@@ -19,6 +19,10 @@
 #include "net/packetbuf.h"
 #include "net/netstack.h"
 
+#include "hal/nrf_gpio.h"
+#include "hal/nrf_reset.h"
+#include "hal/nrf_spu.h"
+
 /* Log configuration */
 
 #include "sys/log.h"
@@ -36,13 +40,13 @@
 #ifdef IOTORII_CONF_HELLO_START_TIME
 	#define IOTORII_HELLO_START_TIME IOTORII_CONF_HELLO_START_TIME
 #else
-	#define IOTORII_HELLO_START_TIME 3 //Default Delay is 2 s
+	#define IOTORII_HELLO_START_TIME 5 //Default Delay is 2 s
 #endif
 
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
 	#define IOTORII_HELLO_IDLE_TIME IOTORII_CONF_HELLO_IDLE_TIME
 #else
-	#define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 2 s
+	#define IOTORII_HELLO_IDLE_TIME 5 //Default Delay is 2 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
@@ -531,6 +535,7 @@ void check_neighbours_hello (list_t list){
 
 static void iotorii_handle_hello_timer ()
 {
+    nrf_gpio_pin_toggle(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN));
 	int mac_max_payload = max_payload();
 	
 	if (mac_max_payload <= 0) //FRAMING HA FALLADO Y NO SE PUEDE CREAR HELLO
@@ -778,6 +783,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 
 void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 {
+    nrf_gpio_pin_toggle(NRF_GPIO_PIN_MAP(NRF_LED2_PORT, NRF_LED2_PIN));
 	const linkaddr_t *sender_addr = packetbuf_addr(PACKETBUF_ADDR_SENDER); //SE LEE EL BUFFER
 
 	LOG_DBG("A Hello message received from ");
@@ -1079,6 +1085,23 @@ static void init (void)
 	//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT
 	//ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 	#endif
+
+
+	nrf_gpio_pin_mcu_select(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN), GPIO_PIN_CNF_MCUSEL_AppMCU);
+	nrf_gpio_pin_mcu_select(NRF_GPIO_PIN_MAP(NRF_LED2_PORT, NRF_LED2_PIN), GPIO_PIN_CNF_MCUSEL_AppMCU);
+	nrf_gpio_pin_mcu_select(NRF_GPIO_PIN_MAP(NRF_LED3_PORT, NRF_LED3_PIN), GPIO_PIN_CNF_MCUSEL_AppMCU);
+	nrf_gpio_pin_mcu_select(NRF_GPIO_PIN_MAP(NRF_LED4_PORT, NRF_LED4_PIN), GPIO_PIN_CNF_MCUSEL_AppMCU);
+	
+	nrf_gpio_cfg(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN), GPIO_PIN_CNF_DIR_Output, GPIO_PIN_CNF_INPUT_Disconnect, GPIO_PIN_CNF_PULL_Pullup, GPIO_PIN_CNF_DRIVE_S0S1, GPIO_PIN_CNF_SENSE_Disabled);
+	nrf_gpio_cfg(NRF_GPIO_PIN_MAP(NRF_LED2_PORT, NRF_LED2_PIN), GPIO_PIN_CNF_DIR_Output, GPIO_PIN_CNF_INPUT_Disconnect, GPIO_PIN_CNF_PULL_Pullup, GPIO_PIN_CNF_DRIVE_S0S1, GPIO_PIN_CNF_SENSE_Disabled);
+	nrf_gpio_cfg(NRF_GPIO_PIN_MAP(NRF_LED3_PORT, NRF_LED3_PIN), GPIO_PIN_CNF_DIR_Output, GPIO_PIN_CNF_INPUT_Disconnect, GPIO_PIN_CNF_PULL_Pullup, GPIO_PIN_CNF_DRIVE_S0S1, GPIO_PIN_CNF_SENSE_Disabled);
+	nrf_gpio_cfg(NRF_GPIO_PIN_MAP(NRF_LED4_PORT, NRF_LED4_PIN), GPIO_PIN_CNF_DIR_Output, GPIO_PIN_CNF_INPUT_Disconnect, GPIO_PIN_CNF_PULL_Pullup, GPIO_PIN_CNF_DRIVE_S0S1, GPIO_PIN_CNF_SENSE_Disabled);
+
+	nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN));
+	nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(NRF_LED2_PORT, NRF_LED2_PIN));
+	nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(NRF_LED3_PORT, NRF_LED3_PIN));
+	nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(NRF_LED4_PORT, NRF_LED4_PIN));
+
 }
 
 

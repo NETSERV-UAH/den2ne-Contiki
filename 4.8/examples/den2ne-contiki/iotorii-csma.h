@@ -19,7 +19,7 @@
 #ifdef IOTORII_CONF_NODE_TYPE
 #define IOTORII_NODE_TYPE IOTORII_CONF_NODE_TYPE
 #else
-#define IOTORII_NODE_TYPE 0 //To support the traditional MAC operation
+#define IOTORII_NODE_TYPE 1 //To support the traditional MAC operation
 #endif
 
 #ifdef CSMA_CONF_SEND_SOFT_ACK
@@ -58,8 +58,8 @@ struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA
 	uint32_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
 	uint8_t number_id;
 	int flag; //FLAG PADRE/HIJO OUTPUT/INPUT
-	uint8_t load; //CARGA DE CADA NODO
-	int in_out; //PUERTOS DE CARGA IN/OUT
+	uint16_t load; //CARGA DE CADA NODO
+	uint16_t in_out; //PUERTOS DE CARGA IN/OUT
 };
 
 typedef struct neighbour_table_entry neighbour_table_entry_t;

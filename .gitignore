@@ -26,3 +26,13 @@
 4.8/examples/[test-common,test-root,udp_trial]
 *cooja*
 *.vscode
+4.8/examples/platform-specific/nrf/start-network-core/build
+4.8/examples/den2ne-nrf5340-dk/root/build/
+4.8/examples/den2ne-nrf5340-dk/common-node/build/
+4.8/examples/hello-world-nrf5340dk/build/
+4.8-aux
+*.o
+4.8/examples/den2ne-ipv6-790/root/build/
+4.8/examples/den2ne-ipv6-790/common-node/build/
+4.8/examples/den2ne-ipv6-242/root/build/
+4.8/examples/den2ne-ipv6-242/common-node/build/
