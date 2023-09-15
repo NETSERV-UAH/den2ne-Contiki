@@ -1,6 +1,9 @@
 CONTIKI_PROJECT = iotorii-root
 all: $(CONTIKI_PROJECT)
 
+PLATFORMS_ONLY += nrf
+BOARDS_ONLY = nrf5340/dk/application
+
 CONTIKI = ../../..
 
 PROJECT_SOURCEFILES += ../iotorii-csma.c
@@ -12,6 +15,7 @@ PROJECT_SOURCEFILES += ../csma-output.c
 
 # use a custom MAC driver: iotorii_mac_driver
 MAKE_MAC = MAKE_MAC_OTHER
+#MAKE_MAC = MAKE_MAC_CSMA
 #MAKE_NET = MAKE_NET_NULLNET
 MAKE_NET = MAKE_NET_IPV6
 #MAKE_ROUTING = MAKE_ROUTING_RPL_LITE

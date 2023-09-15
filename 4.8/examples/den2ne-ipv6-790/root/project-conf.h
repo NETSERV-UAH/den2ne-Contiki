@@ -46,14 +46,22 @@
 
 /* Configure the csma_driver for netstack.h */
 #ifndef IOTORII_CONF_NODE_TYPE
-#define IOTORII_CONF_NODE_TYPE 1 //POR DEFECTO NODO ROOT
+    #define IOTORII_CONF_NODE_TYPE 1 //POR DEFECTO NODO ROOT
 #endif
 
 #if IOTORII_CONF_NODE_TYPE > 0 //PARA NODO COMÚN O ROOT
-#define NETSTACK_CONF_MAC      iotorii_csma_driver
-
+    #define NETSTACK_CONF_MAC      iotorii_csma_driver
 #elif IOTORII_CONF_NODE_TYPE == 0 //SI OPERACIÓN MAC TRADICIONAL
-#define NETSTACK_CONF_MAC      csma_driver
+    #define NETSTACK_CONF_MAC      csma_driver
+#endif
+
+/*---------------------------------------------------------------------------*/
+
+/* Configure the platform LEDs use */
+#ifndef IOTORII_CONF_LED
+    #define IOTORII_LED      0
+#else
+    #define IOTORII_LED      IOTORII_CONF_LED
 #endif
 
 /*---------------------------------------------------------------------------*/

@@ -369,7 +369,7 @@ void iotorii_handle_load_timer_ipv6 ()
 			first_edge_sent = 1;
 
 		#if LOG_DBG_STATISTIC == 1		
-		printf("//INFO HANDLE LOAD// carga enviada: %d de direccion %s\n", node->load, node->str_addr); 
+			printf("//INFO HANDLE LOAD// carga enviada: %d de direccion %s\n", node->load, node->str_addr); 
 		#endif
 
 		udp_conn.udp_conn->lport=15650;
@@ -431,7 +431,7 @@ void iotorii_handle_share_upstream_timer_ipv6 ()
 		}
 		
 		#if IOTORII_NODE_TYPE == 2
-		node->load = 100; //SE ASIGNA COMO MÁXIMO UNA CANTIDAD DE 100 PARA NODOS COMUNES
+			node->load = 100; //SE ASIGNA COMO MÁXIMO UNA CANTIDAD DE 100 PARA NODOS COMUNES
 		#endif
 		
 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
@@ -458,7 +458,7 @@ void iotorii_handle_share_upstream_timer_ipv6 ()
 	
 	start_share = 1; // ANTES
 	#if LOG_DBG_STATISTIC == 1
-	ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+		ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 	#endif
 }
 
@@ -576,18 +576,15 @@ static void iotorii_handle_hello_timer ()
 	simple_udp_sendto(&udp_conn, "hello", strlen("hello"), &dest_ipaddr2);
 	simple_udp_sendto(&udp_conn, "hello", strlen("hello"), &dest_ipaddr3);
 	printf("//INFO HANDLE HELLO// Mensaje Hello enviado\n");
-	
-	#if LOG_DBG_STATISTIC == 1
-	number_of_hello_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES HELLO
-	#endif
 		
 	#if IOTORII_NODE_TYPE == 1 //ROOT
-	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+		ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 	#endif
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 
 	#if LOG_DBG_STATISTIC == 1
-	check_neighbours_hello(neighbour_table_entry_list);
+		number_of_hello_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES HELLO
+		check_neighbours_hello(neighbour_table_entry_list);
 	#endif
 }
 
@@ -612,7 +609,7 @@ void iotorii_handle_send_sethlmac_timer_ipv6 ()
 		payload_entry = NULL;
 
 		#if LOG_DBG_STATISTIC == 1
-		number_of_sethlmac_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES SETHLMAC
+			number_of_sethlmac_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES SETHLMAC
 		#endif
 
 		if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
@@ -622,7 +619,7 @@ void iotorii_handle_send_sethlmac_timer_ipv6 ()
 			sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
 			
 			#if LOG_DBG_DEVELOPER == 1
-			LOG_DBG("Scheduling a SetHLMAC message after %u ticks in the future\n", (unsigned)sethlmac_delay_time);
+				LOG_DBG("Scheduling a SetHLMAC message after %u ticks in the future\n", (unsigned)sethlmac_delay_time);
 			#endif
 			
 			ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer_ipv6, NULL);
@@ -639,8 +636,8 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 	neighbour_table_entry_t_ipv6 *neighbour_entry;
 
 	#if LOG_DBG_DEVELOPER == 1 
-	LOG_DBG("Info before sending SetHLMAC: ");
-	LOG_DBG("Number of neighbours: %d, mac_max_payload: %d.\n", number_of_neighbours, mac_max_payload);
+		LOG_DBG("Info before sending SetHLMAC: ");
+		LOG_DBG("Number of neighbours: %d, mac_max_payload: %d.\n", number_of_neighbours, mac_max_payload);
 	#endif
 
 	uint8_t number_of_neighbours_new = number_of_neighbours;
@@ -652,7 +649,7 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 			number_of_neighbours_new = number_of_neighbours - 1;
 			
 			#if LOG_DBG_DEVELOPER == 1
-			LOG_DBG("Sender node is in neighbour list, number_of_neighbours: %u, number_of_neighbours_new: %u.\n", number_of_neighbours, number_of_neighbours_new);
+				LOG_DBG("Sender node is in neighbour list, number_of_neighbours: %u, number_of_neighbours_new: %u.\n", number_of_neighbours, number_of_neighbours_new);
 			#endif
 		}
 	}
@@ -679,14 +676,14 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 				random_list[r] = neighbour_entry;
 				
 				#if LOG_DBG_DEVELOPER == 1
-				LOG_DBG("number_of_neighbours_new = %u Neighbor (ID = %u) gets random priority %u\n", number_of_neighbours_new, random_list[r]->number_id, r);
+					LOG_DBG("number_of_neighbours_new = %u Neighbor (ID = %u) gets random priority %u\n", number_of_neighbours_new, random_list[r]->number_id, r);
 				#endif
 			}
 			
 			else //EL NODO EMISOR ESTÁ EN LA LISTA DE VECINOS
 			{
 				#if LOG_DBG_DEVELOPER == 1
-				LOG_DBG("Sender node is eliminated in random list!\n");
+					LOG_DBG("Sender node is eliminated in random list!\n");
 				#endif
 			}
 		}
@@ -771,13 +768,12 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 				clock_time_t sethlmac_delay_time = 0; //EL DELAY ANTES DE ENVIAR EL PRIMER MENSAJE SETHLMAC (ENVIADO POR ROOT) ES 0
 				
 				#if IOTORII_NODE_TYPE > 1 //SI NODO COMÚN SE PLANIFICAN DELAYS ANTES DE ENVIAR LOS DEMÁS MENSAJES SETHLMAC
-				sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 128);
-				sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
-				
-				#if LOG_DBG_DEVELOPER == 1
-				LOG_DBG("Scheduling a SetHLMAC message by the root node after %u ticks in the future\n", (unsigned)sethlmac_delay_time);
-				#endif
-				
+					sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 128);
+					sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
+					
+					#if LOG_DBG_DEVELOPER == 1
+						LOG_DBG("Scheduling a SetHLMAC message by the root node after %u ticks in the future\n", (unsigned)sethlmac_delay_time);
+					#endif
 				#endif
 				
 				list_add(payload_entry_list, payload_entry); //SE AÑADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
@@ -919,152 +915,152 @@ void iotorii_handle_incoming_hello_ipv6 (const uip_ipaddr_t *sender_addr) //PROC
 
 void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
 {
-	LOG_DBG("A message received from ");
-	LOG_DBG_LLADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
-	LOG_DBG("\n");
+	// LOG_DBG("A message received from ");
+	// LOG_DBG_LLADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
+	// LOG_DBG("\n");
 
-	hlmacaddr_t *received_hlmac_addr;
-	received_hlmac_addr = iotorii_extract_address(); //SE COGE LA DIRECCIÓN RECIBIDA
-	uint32_t timestamp = iotorii_extract_timestamp(); //SE COGE EL TIMESTAMP RECIBIDA
+	// hlmacaddr_t *received_hlmac_addr;
+	// received_hlmac_addr = iotorii_extract_address(); //SE COGE LA DIRECCIÓN RECIBIDA
+	// uint32_t timestamp = iotorii_extract_timestamp(); //SE COGE EL TIMESTAMP RECIBIDA
 	
-	linkaddr_t sender_link_address = *packetbuf_addr(PACKETBUF_ADDR_SENDER);
-	const linkaddr_t *sender = &sender_link_address;
+	// linkaddr_t sender_link_address = *packetbuf_addr(PACKETBUF_ADDR_SENDER);
+	// const linkaddr_t *sender = &sender_link_address;
 	
-	neighbour_table_entry_t *nb;	
-	this_node_t *node;
-	node = list_head(node_list);
+	// neighbour_table_entry_t *nb;	
+	// this_node_t *node;
+	// node = list_head(node_list);
 
-	if (hlmac_is_unspecified_addr(*received_hlmac_addr)) //SI NO SE ESPECIFICA DIRECCIÓN, NO HAY PARA EL NODO
-	{		
-		if (start_load == 1 && msg_share_on == 0)
-		{
-			int packetbuf_data_len = packetbuf_datalen();
+	// if (hlmac_is_unspecified_addr(*received_hlmac_addr)) //SI NO SE ESPECIFICA DIRECCIÓN, NO HAY PARA EL NODO
+	// {		
+	// 	if (start_load == 1 && msg_share_on == 0)
+	// 	{
+	// 		int packetbuf_data_len = packetbuf_datalen();
 			
-			uint8_t *p_load = (uint8_t *) malloc (sizeof(uint8_t));
-			memcpy(p_load, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER 
+	// 		uint8_t *p_load = (uint8_t *) malloc (sizeof(uint8_t));
+	// 		memcpy(p_load, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER 
 			
-			char* str_sender = (char*) malloc (sizeof(char) * (LINKADDR_SIZE * (2 + 1) + 1));
-			str_sender = link_addr_to_str (sender_link_address, 1);	//LENGTH = 1 PARA MOSTRAR SOLO EL ID
+	// 		char* str_sender = (char*) malloc (sizeof(char) * (LINKADDR_SIZE * (2 + 1) + 1));
+	// 		str_sender = link_addr_to_str (sender_link_address, 1);	//LENGTH = 1 PARA MOSTRAR SOLO EL ID
 			
-			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
-			{
-				if (linkaddr_cmp(&nb->addr, sender)) //SE BUSCA EN LA LISTA DE VECINOS LA DIRECCIÓN QUE HA ENVIADO EL MENSAJE 
-				{
-					memcpy(&nb->load, packetbuf_dataptr(), packetbuf_data_len); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
-					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\n", *p_load, str_sender);
-					#if LOG_DBG_STATISTIC == 1
-					ctimer_set(&statistic_timer, 0, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS AUTOMÁTICAMENTE
-					#endif
-				}
-			}
+	// 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+	// 		{
+	// 			if (linkaddr_cmp(&nb->addr, sender)) //SE BUSCA EN LA LISTA DE VECINOS LA DIRECCIÓN QUE HA ENVIADO EL MENSAJE 
+	// 			{
+	// 				memcpy(&nb->load, packetbuf_dataptr(), packetbuf_data_len); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
+	// 				printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\n", *p_load, str_sender);
+	// 				#if LOG_DBG_STATISTIC == 1
+	// 				ctimer_set(&statistic_timer, 0, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS AUTOMÁTICAMENTE
+	// 				#endif
+	// 			}
+	// 		}
 			
-			free(p_load);
-			p_load = NULL;
+	// 		free(p_load);
+	// 		p_load = NULL;
 			
-			free(str_sender);
-			str_sender = NULL;
-		}
+	// 		free(str_sender);
+	// 		str_sender = NULL;
+	// 	}
 		
-		else if (msg_share_on == 1)
-		{
-			int packetbuf_data_len = packetbuf_datalen();
+	// 	else if (msg_share_on == 1)
+	// 	{
+	// 		int packetbuf_data_len = packetbuf_datalen();
 			
-			int *p_extra = (int *) malloc (sizeof(int));
-			memcpy(p_extra, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER LA CARGA SOBRANTE QUE HA ENVIADO EL NODO
+	// 		int *p_extra = (int *) malloc (sizeof(int));
+	// 		memcpy(p_extra, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER LA CARGA SOBRANTE QUE HA ENVIADO EL NODO
 			
-			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
-			{
-				if (linkaddr_cmp(&nb->addr, sender)) //SE BUSCA EN LA LISTA DE VECINOS LA DIRECCIÓN QUE HA ENVIADO EL MENSAJE 
-				{	
-					//NODO NO EDGE RECIBE CARGA DE SU HIJO O HIJOS
-					if (nb->flag == 0 && edge == 0 && n_hijos != 0) 
-					{
-						//if (*p_extra > 0) //LA CARGA RECIBIDA DEL HIJO ES POSITIVA Y HAY QUE MODIFICAR LA CARGA DEL NODO
-						node->load = node->load + *p_extra;	
+	// 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+	// 		{
+	// 			if (linkaddr_cmp(&nb->addr, sender)) //SE BUSCA EN LA LISTA DE VECINOS LA DIRECCIÓN QUE HA ENVIADO EL MENSAJE 
+	// 			{	
+	// 				//NODO NO EDGE RECIBE CARGA DE SU HIJO O HIJOS
+	// 				if (nb->flag == 0 && edge == 0 && n_hijos != 0) 
+	// 				{
+	// 					//if (*p_extra > 0) //LA CARGA RECIBIDA DEL HIJO ES POSITIVA Y HAY QUE MODIFICAR LA CARGA DEL NODO
+	// 					node->load = node->load + *p_extra;	
 						
-						printf("//INFO INCOMING SHARE// carga actual del nodo: %d\n", node->load);
+	// 					printf("//INFO INCOMING SHARE// carga actual del nodo: %d\n", node->load);
 
-						n_hijos--; //SE RESTA EL HIJO DE LA CUENTA TOTAL DE HIJOS
+	// 					n_hijos--; //SE RESTA EL HIJO DE LA CUENTA TOTAL DE HIJOS
 						
-						if (n_hijos == 0)
-						{
-							new_edge = 1; //PARA SEGUIR EL ÁRBOL
-							#if LOG_DBG_STATISTIC == 1
-							ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
-							#endif
+	// 					if (n_hijos == 0)
+	// 					{
+	// 						new_edge = 1; //PARA SEGUIR EL ÁRBOL
+	// 						#if LOG_DBG_STATISTIC == 1
+	// 						ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
+	// 						#endif
 
-							#if IOTORII_NODE_TYPE == 1
-							printf("FIN CONVERGENCIA\n");
-							#endif
-						}						
-					}
+	// 						#if IOTORII_NODE_TYPE == 1
+	// 						printf("FIN CONVERGENCIA\n");
+	// 						#endif
+	// 					}						
+	// 				}
 					
-					if (*p_extra != 0 && nb->in_out == 0) //SI HA HABIDO ACTUALIZACIÓN DE LA CARGA, SE ACTUALIZA EL VALOR DEL "FLUJO DE CARGA"
-						nb->in_out = *p_extra;
-				}
-			}
+	// 				if (*p_extra != 0 && nb->in_out == 0) //SI HA HABIDO ACTUALIZACIÓN DE LA CARGA, SE ACTUALIZA EL VALOR DEL "FLUJO DE CARGA"
+	// 					nb->in_out = *p_extra;
+	// 			}
+	// 		}
 			
-			free(p_extra);
-			p_extra = NULL;	
-		}
-	}
+	// 		free(p_extra);
+	// 		p_extra = NULL;	
+	// 	}
+	// }
 	
-	else //ESTÁ ESPECIFICADA
-	{
-		char *new_hlmac_addr_str = hlmac_addr_to_str(*received_hlmac_addr);
-		printf("//INFO INCOMING HLMAC// HLMAC recibida: %s\n", new_hlmac_addr_str);
-		free(new_hlmac_addr_str);
+	// else //ESTÁ ESPECIFICADA
+	// {
+	// 	char *new_hlmac_addr_str = hlmac_addr_to_str(*received_hlmac_addr);
+	// 	printf("//INFO INCOMING HLMAC// HLMAC recibida: %s\n", new_hlmac_addr_str);
+	// 	free(new_hlmac_addr_str);
 
-		if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA AL HIJO
-		{
-			uint8_t is_added = hlmactable_add(*received_hlmac_addr, timestamp);
+	// 	if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA AL HIJO
+	// 	{
+	// 		uint8_t is_added = hlmactable_add(*received_hlmac_addr, timestamp);
 
-			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
-			{					
-				LOG_DBG("New HLMAC address is assigned to the node.\n");
-				LOG_DBG("New HLMAC address is sent to the neighbours.\n");
-				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
-				#if IOTORII_NODE_TYPE == 2
-				ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
-				#endif
-			}
-			else //NO SE HA ASIGNADO
-			{
-				LOG_DBG("New HLMAC address not added to the HLMAC table, and memory is free.\n");
+	// 		if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
+	// 		{					
+	// 			LOG_DBG("New HLMAC address is assigned to the node.\n");
+	// 			LOG_DBG("New HLMAC address is sent to the neighbours.\n");
+	// 			iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
+	// 			#if IOTORII_NODE_TYPE == 2
+	// 			ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	// 			#endif
+	// 		}
+	// 		else //NO SE HA ASIGNADO
+	// 		{
+	// 			LOG_DBG("New HLMAC address not added to the HLMAC table, and memory is free.\n");
 				
-				free(received_hlmac_addr->address);
-				received_hlmac_addr->address = NULL;
-				free(received_hlmac_addr);
-				received_hlmac_addr = NULL;
-			}
+	// 			free(received_hlmac_addr->address);
+	// 			received_hlmac_addr->address = NULL;
+	// 			free(received_hlmac_addr);
+	// 			received_hlmac_addr = NULL;
+	// 		}
 			
-			//BÚSQUEDA DE LA DIRECCIÓN DEL EMISOR EN LA LISTA DE VECINOS 
-			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
-			{
-				if (linkaddr_cmp(&nb->addr, sender))
-				{
-					if (is_added)
-						nb->flag = 1; //SE MARCA COMO PADRE ESE VECINO 
-					else
-						nb->flag = -1; //SE MARCA COMO PADRE ESE VECINO PERO SIN UNIÓN DE PADRE
-				}
-			}
-			number_of_neighbours_flag--; //SE DECREMENTA EL NÚMERO DE VECINOS DE LOS QUE NO SE HA RECIBIDO HLMAC
-		}
-		else
-		{
-			LOG_DBG("New HLMAC address not assigned to the node (loop), and memory is free.\n");
+	// 		//BÚSQUEDA DE LA DIRECCIÓN DEL EMISOR EN LA LISTA DE VECINOS 
+	// 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+	// 		{
+	// 			if (linkaddr_cmp(&nb->addr, sender))
+	// 			{
+	// 				if (is_added)
+	// 					nb->flag = 1; //SE MARCA COMO PADRE ESE VECINO 
+	// 				else
+	// 					nb->flag = -1; //SE MARCA COMO PADRE ESE VECINO PERO SIN UNIÓN DE PADRE
+	// 			}
+	// 		}
+	// 		number_of_neighbours_flag--; //SE DECREMENTA EL NÚMERO DE VECINOS DE LOS QUE NO SE HA RECIBIDO HLMAC
+	// 	}
+	// 	else
+	// 	{
+	// 		LOG_DBG("New HLMAC address not assigned to the node (loop), and memory is free.\n");
 			
-			free(received_hlmac_addr->address);
-			received_hlmac_addr->address = NULL;
-			free(received_hlmac_addr);
-			received_hlmac_addr = NULL;
-		}
-	}
+	// 		free(received_hlmac_addr->address);
+	// 		received_hlmac_addr->address = NULL;
+	// 		free(received_hlmac_addr);
+	// 		received_hlmac_addr = NULL;
+	// 	}
+	// }
 	
-	#if LOG_DBG_STATISTIC == 1
-	//printf("Periodic Statistics: node_id: %u, convergence_time_end\n", node_id);
-	#endif
+	// #if LOG_DBG_STATISTIC == 1
+	// //printf("Periodic Statistics: node_id: %u, convergence_time_end\n", node_id);
+	// #endif
 }
 
 void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_addr, const uint8_t *data, uint16_t datalen) //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
@@ -1097,7 +1093,7 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 					memcpy(&nb->load, data, datalen); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
 					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo %s\n", *p_load, sender_ip);
 					#if LOG_DBG_STATISTIC == 1
-					ctimer_set(&statistic_timer, 0, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS AUTOMÁTICAMENTE
+						                                      ctimer_set(&statistic_timer, 0, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS AUTOMÁTICAMENTE
 					#endif
 				}
 			}
@@ -1258,7 +1254,7 @@ static void iotorii_handle_sethlmac_timer ()
 	
 	//ESTADÍSTICAS
 	#if LOG_DBG_STATISTIC == 1
-	ctimer_set(&statistic_timer, IOTORII_STATISTICS1_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL);
+		ctimer_set(&statistic_timer, IOTORII_STATISTICS1_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL);
 	#endif
 	timestamp++;
 }

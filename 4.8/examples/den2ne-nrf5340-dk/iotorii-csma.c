@@ -19,10 +19,6 @@
 #include "net/packetbuf.h"
 #include "net/netstack.h"
 
-#include "hal/nrf_gpio.h"
-#include "hal/nrf_reset.h"
-#include "hal/nrf_spu.h"
-
 /* Log configuration */
 
 #include "sys/log.h"
@@ -46,7 +42,7 @@
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
 	#define IOTORII_HELLO_IDLE_TIME IOTORII_CONF_HELLO_IDLE_TIME
 #else
-	#define IOTORII_HELLO_IDLE_TIME 5 //Default Delay is 2 s
+	#define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 2 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
@@ -342,7 +338,7 @@ void iotorii_handle_load_timer ()
 			first_edge_sent = 1;
 
 		#if LOG_DBG_STATISTIC == 1		
-			printf("//INFO HANDLE LOAD// carga enviada: %d de direccion %s\n", node->load, node->str_addr); 
+			printf("//INFO HANDLE LOAD// carga enviada: %d de direccion %s\n\r", node->load, node->str_addr); 
 		#endif
 
 		send_packet(NULL, NULL);
@@ -370,7 +366,7 @@ void iotorii_handle_share_upstream_timer ()
 		// if (node->load > 100)
 		// {
 		// 	extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 			
-		// 	printf("//INFO HANDLE SHARE UP// En este nodo sobra una carga de %d\n", extra_load);		
+		// 	printf("//INFO HANDLE SHARE UP// En este nodo sobra una carga de %d\n\r", extra_load);		
 		// }
 		
 		// else //node->load <= 100
@@ -383,13 +379,13 @@ void iotorii_handle_share_upstream_timer ()
 		// 		extra_load = -extra_load;
 		// 	}
 			
-		// 	printf("//INFO HANDLE SHARE UP// En este nodo permite una carga adicional de valor %d\n", -extra_load);
+		// 	printf("//INFO HANDLE SHARE UP// En este nodo permite una carga adicional de valor %d\n\r", -extra_load);
 		// }
 
 		if (node->load > 100)
 		{
 			extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 			
-			printf("//INFO HANDLE SHARE UP// En este nodo sobra una carga de %d\n", extra_load);		
+			printf("//INFO HANDLE SHARE UP// En este nodo sobra una carga de %d\n\r", extra_load);		
 		}
 		else //node->load <= 100 
 		{
@@ -397,11 +393,11 @@ void iotorii_handle_share_upstream_timer ()
 			if (node->load < 0)
 				extra_load = -extra_load;
 			
-			printf("//INFO HANDLE SHARE UP// En este nodo permite una carga adicional de valor %d\n", -extra_load);
+			printf("//INFO HANDLE SHARE UP// En este nodo permite una carga adicional de valor %d\n\r", -extra_load);
 		}
 		
 		#if IOTORII_NODE_TYPE == 2
-		node->load = 100; //SE ASIGNA COMO MÁXIMO UNA CANTIDAD DE 100 PARA NODOS COMUNES
+			node->load = 100; //SE ASIGNA COMO MÁXIMO UNA CANTIDAD DE 100 PARA NODOS COMUNES
 		#endif
 		
 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
@@ -415,8 +411,8 @@ void iotorii_handle_share_upstream_timer ()
 				packetbuf_set_datalen(sizeof(extra_load));									
 				packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 			
-				printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\n", node->load);
-				printf("//INFO HANDLE SHARE UP// Carga informada: %d\n", extra_load); 
+				printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\n\r", node->load);
+				printf("//INFO HANDLE SHARE UP// Carga informada: %d\n\r", extra_load); 
 			}	
 		}
 		
@@ -424,7 +420,9 @@ void iotorii_handle_share_upstream_timer ()
 	}
 	
 	start_share = 1; // ANTES
-	ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	#if LOG_DBG_STATISTIC == 1
+		ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	#endif
 }
 
 
@@ -441,13 +439,13 @@ static void iotorii_handle_statistic_timer ()
 	if(node!=NULL){
 		if (start_share == 0 && msg_share_on == 0)
 		{
-			printf("Periodic Statistics: node_id: %u, n_hello: %d, n_sethlmac: %d, n_neighbours: %d\n", node_id, number_of_hello_messages, number_of_sethlmac_messages, number_of_neighbours);
-			printf("//INFO STATISTICS// n_hello: %d, n_sethlmac: %d\n", number_of_hello_messages, number_of_sethlmac_messages);
+			printf("Periodic Statistics: node_id: %u, n_hello: %d, n_sethlmac: %d, n_neighbours: %d\n\r", node_id, number_of_hello_messages, number_of_sethlmac_messages, number_of_neighbours);
+			printf("//INFO STATISTICS// n_hello: %d, n_sethlmac: %d\n\r", number_of_hello_messages, number_of_sethlmac_messages);
 			printf("//INFO STATISTICS// El nodo %s tiene %d vecinos y no ha recibido HLMAC de %d vecinos: ", node->str_addr, number_of_neighbours, number_of_neighbours_flag);
 			
 			if (!number_of_neighbours_flag)
 			{
-				printf("es edge\n");		
+				printf("es edge\n\r");		
 				edge = 1; 
 
 				if (start_load == 0 && sent_no_edge == 0) //NO SE HA INICIADO EL ENVÍO DE MENSAJES TODAVÍA
@@ -455,7 +453,7 @@ static void iotorii_handle_statistic_timer ()
 			}
 			else
 			{
-				printf("no es edge\n");
+				printf("no es edge\n\r");
 				
 				if (start_load == 1 && sent_no_edge == 0) //SEGUNDA VUELTA CUANDO YA SE HA INFORMADO DE LA CARGA DE LOS NODOS EDGE
 				{
@@ -466,7 +464,7 @@ static void iotorii_handle_statistic_timer ()
 
 			start_load = 1; //SE PONE A 1 CUANDO HAN EMPEZADO LOS EDGE A ENVIAR CARGAS Y ACTIVA LOS ENVÍOS EN LOS NODOS NO EDGE
 			
-			printf("Carga actual del nodo: %d\n", node->load);
+			printf("Carga actual del nodo: %d\n\r", node->load);
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb)) //LISTA DE VECINOS DEL NODO
 			{				
 				if (nb->flag == 1 || nb->flag == -1)
@@ -479,9 +477,9 @@ static void iotorii_handle_statistic_timer ()
 				}
 				
 				if (nb->flag == -1)
-					printf("%d, %d, (%d)\n", nb->flag, nb->load, nb->in_out);		
+					printf("%d, %d, (%d)\n\r", nb->flag, nb->load, nb->in_out);		
 				else
-					printf("%d, %d, %d\n", nb->flag, nb->load, nb->in_out);		
+					printf("%d, %d, %d\n\r", nb->flag, nb->load, nb->in_out);		
 			}
 			
 			count_hijos = 1; //SE HA REALIZADO LA CUENTA DE LOS HIJOS
@@ -494,7 +492,7 @@ static void iotorii_handle_statistic_timer ()
 		}
 		else if (msg_share_on == 1)
 		{
-			printf("Carga actual del nodo: %d\n", node->load);
+			printf("Carga actual del nodo: %d\n\r", node->load);
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb)) //LISTA DE VECINOS DEL NODO
 			{
 				if (nb->flag == 1 || nb->flag == -1)
@@ -503,9 +501,9 @@ static void iotorii_handle_statistic_timer ()
 					printf("--> Vecino hijo  (flag, carga inicial, in_out) --> ");
 				
 				if (nb->flag == -1)
-					printf("%d, %d, (%d)\n", nb->flag, nb->load, nb->in_out);		
+					printf("%d, %d, (%d)\n\r", nb->flag, nb->load, nb->in_out);		
 				else
-					printf("%d, %d, %d\n", nb->flag, nb->load, nb->in_out);				
+					printf("%d, %d, %d\n\r", nb->flag, nb->load, nb->in_out);				
 			}	
 		}	
 		
@@ -515,7 +513,7 @@ static void iotorii_handle_statistic_timer ()
 		if (load_null == 0) //SI UN NODO SABE YA TODAS LAS CARGAS DE SUS VECINOS PUEDE COMENZAR CON EL REPARTO DE CARGAS
 			msg_share_on = 1;
 		else
-			printf("//INFO STATISTICS// Faltan %d nodos por conocer su carga\n", load_null);
+			printf("//INFO STATISTICS// Faltan %d nodos por conocer su carga\n\r", load_null);
 	}
 }
 
@@ -535,33 +533,30 @@ void check_neighbours_hello (list_t list){
 
 static void iotorii_handle_hello_timer ()
 {
-    nrf_gpio_pin_toggle(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN));
 	int mac_max_payload = max_payload();
 	
 	if (mac_max_payload <= 0) //FRAMING HA FALLADO Y NO SE PUEDE CREAR HELLO
-	   LOG_WARN("output: failed to calculate payload size - Hello can not be created\n");
+	   LOG_WARN("output: failed to calculate payload size - Hello can not be created\n\r");
 	else
 	{
 		packetbuf_clear(); //HELLO NO TIENE PAYLOAD
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-		LOG_DBG("Hello prepared to send\n");
-		printf("//INFO HANDLE HELLO// Mensaje Hello enviado\n");
+		LOG_DBG("Hello prepared to send\n\r");
+		printf("//INFO HANDLE HELLO// Mensaje Hello enviado\n\r");
 		
 		#if LOG_DBG_STATISTIC == 1
-		number_of_hello_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES HELLO
+			number_of_hello_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES HELLO
+			check_neighbours_hello(neighbour_table_entry_list);
 		#endif
 
 		send_packet(NULL, NULL);
 	}
 	#if IOTORII_NODE_TYPE == 1 //ROOT
-	//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA (LOS TIMERS SE SOBREESCRIBEN)
-	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+		//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT AL RECIBIR UN HELLO DE UN NODO NO CONOCIDO HASTA AHORA (LOS TIMERS SE SOBREESCRIBEN)
+		ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 	#endif
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 	
-	#if LOG_DBG_STATISTIC == 1
-	check_neighbours_hello(neighbour_table_entry_list);
-	#endif
 }
 
 
@@ -586,10 +581,12 @@ void iotorii_handle_send_sethlmac_timer ()
 
 		//Control info: the destination address, the broadcast address, is tagged to the outbound packet
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-		LOG_DBG("Queue: SetHLMAC prepared to send\n");
+		LOG_DBG("Queue: SetHLMAC prepared to send\n\r");
 
-		number_of_sethlmac_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES SETHLMAC
-		
+		#if LOG_DBG_STATISTIC == 1
+			number_of_sethlmac_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES SETHLMAC
+		#endif
+
 		if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
 		{
 			//SE PLANIFICA EL SIGUIENTE MENSAJE
@@ -597,7 +594,7 @@ void iotorii_handle_send_sethlmac_timer ()
 			sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
 			
 			#if LOG_DBG_DEVELOPER == 1
-			LOG_DBG("Scheduling a SetHLMAC message after %u ticks in the future\n", (unsigned)sethlmac_delay_time);
+				LOG_DBG("Scheduling a SetHLMAC message after %u ticks in the future\n\r", (unsigned)sethlmac_delay_time);
 			#endif
 						
 			ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL);
@@ -605,7 +602,7 @@ void iotorii_handle_send_sethlmac_timer ()
 		send_packet(NULL, NULL);
 	}
 	
-	printf("INICIO CONVERGENCIA\n");
+	printf("INICIO CONVERGENCIA\n\r");
 }
 
 
@@ -614,15 +611,15 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 	int mac_max_payload = max_payload();
 	
 	if (mac_max_payload <= 0) //FRAMING HA FALLADO Y SETHLMAC NO SE PUEDE CREAR
-	   LOG_WARN("output: failed to calculate payload size - SetHLMAC can not be created\n");
+	   LOG_WARN("output: failed to calculate payload size - SetHLMAC can not be created\n\r");
 	
 	else
 	{
 		neighbour_table_entry_t *neighbour_entry;
 
 		#if LOG_DBG_DEVELOPER == 1 
-		LOG_DBG("Info before sending SetHLMAC: ");
-		LOG_DBG("Number of neighbours: %d, mac_max_payload: %d, LINKADDR_SIZE: %d.\n", number_of_neighbours, mac_max_payload, LINKADDR_SIZE);
+			LOG_DBG("Info before sending SetHLMAC: ");
+			LOG_DBG("Number of neighbours: %d, mac_max_payload: %d, LINKADDR_SIZE: %d.\n\r", number_of_neighbours, mac_max_payload, LINKADDR_SIZE);
 		#endif
 
 		uint8_t number_of_neighbours_new = number_of_neighbours;
@@ -634,7 +631,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				number_of_neighbours_new = number_of_neighbours - 1;
 				
 				#if LOG_DBG_DEVELOPER == 1
-				LOG_DBG("Sender node is in neighbour list, number_of_neighbours: %u, number_of_neighbours_new: %u.\n", number_of_neighbours, number_of_neighbours_new);
+					LOG_DBG("Sender node is in neighbour list, number_of_neighbours: %u, number_of_neighbours_new: %u.\n\r", number_of_neighbours, number_of_neighbours_new);
 				#endif
 			}
 		}
@@ -661,14 +658,14 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					random_list[r] = neighbour_entry;
 				   
 					#if LOG_DBG_DEVELOPER == 1
-					LOG_DBG("number_of_neighbours_new = %u Neighbor (ID = %u) gets random priority %u\n", number_of_neighbours_new, random_list[r]->id, r);
+						LOG_DBG("number_of_neighbours_new = %u Neighbor (ID = %u) gets random priority %u\n\r", number_of_neighbours_new, random_list[r]->id, r);
 					#endif
 				}
 				
 				else //EL NODO EMISOR ESTÁ EN LA LISTA DE VECINOS
 				{
 					#if LOG_DBG_DEVELOPER == 1
-					LOG_DBG("Sender node is eliminated in random list!\n");
+						LOG_DBG("Sender node is eliminated in random list!\n\r");
 					#endif
 				}
 		    }
@@ -734,19 +731,19 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					clock_time_t sethlmac_delay_time = 0; //EL DELAY ANTES DE ENVIAR EL PRIMER MENSAJE SETHLMAC (ENVIADO POR ROOT) ES 0
 					
 					#if IOTORII_NODE_TYPE > 1 //SI NODO COMÚN SE PLANIFICAN DELAYS ANTES DE ENVIAR LOS DEMÁS MENSAJES SETHLMAC
-					sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 128);
-					sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
-					
-					#if LOG_DBG_DEVELOPER == 1
-					LOG_DBG("Scheduling a SetHLMAC message by the root node after %u ticks in the future\n", (unsigned)sethlmac_delay_time);
-					#endif
-					
+						sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 128);
+						sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
+						
+						#if LOG_DBG_DEVELOPER == 1
+							LOG_DBG("Scheduling a SetHLMAC message by the root node after %u ticks in the future\n\r", (unsigned)sethlmac_delay_time);
+						#endif
 					#endif
 					
 					list_add(payload_entry_list, payload_entry); //SE AÑADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
-					//#if IOTORII_NODE_TYPE == 1
+					
+					#if IOTORII_NODE_TYPE == 1
 						ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL); //SET TIMER
-					//#endif
+					#endif
 				}
 				else //SI NO ESTÁ VACÍA NO SE CONFIGURA EL TIEMPO Y DIRECTAMENTE SE AÑADE LA ENTRADA DE PAYLOAD
 					list_add(payload_entry_list, payload_entry);
@@ -755,12 +752,12 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				
 
 				char *neighbour_hlmac_addr_str = hlmac_addr_to_str(addr);
-				printf("SetHLMAC prefix (addr:%s) added to queue to advertise to %d nodes.\n", neighbour_hlmac_addr_str, i-1);
-				LOG_DBG("SetHLMAC prefix (addr:%s) added to queue to advertise to %d nodes.\n", neighbour_hlmac_addr_str, i-1);
+				printf("SetHLMAC prefix (addr:%s) added to queue to advertise to %d nodes.\n\r", neighbour_hlmac_addr_str, i-1);
+				LOG_DBG("SetHLMAC prefix (addr:%s) added to queue to advertise to %d nodes.\n\r", neighbour_hlmac_addr_str, i-1);
 				free(neighbour_hlmac_addr_str);
 			}			
 			else //SI EL NODO NO TIENE VECINOS PARA ENVIAR MENSAJE SETHLMAC O EL PAYLOAD ES PEQUEÑO
-				LOG_DBG("Node has not any neighbour (or payload is low) to send SetHLMAC.\n");
+				LOG_DBG("Node has not any neighbour (or payload is low) to send SetHLMAC.\n\r");
 
 
 			//SE BORRA LA LISTA ALEATORIA DE VECINOS
@@ -777,18 +774,17 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 		} //END if number_of_neighbours_new
 	} // END else
 
-	ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	//ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 }
 
 
 void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 {
-    nrf_gpio_pin_toggle(NRF_GPIO_PIN_MAP(NRF_LED2_PORT, NRF_LED2_PIN));
 	const linkaddr_t *sender_addr = packetbuf_addr(PACKETBUF_ADDR_SENDER); //SE LEE EL BUFFER
 
 	LOG_DBG("A Hello message received from ");
 	LOG_DBG_LLADDR(sender_addr);
-	LOG_DBG("\n");
+	LOG_DBG("\n\r");
 
 	if (number_of_neighbours < 256) //SI NO SE HA SUPERADO EL MÁXIMO DE ENTRADAS EN LA LISTA
 	{
@@ -820,21 +816,21 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			
 			LOG_DBG("A new neighbour added to IoTorii neighbour table, address: ");
 			LOG_DBG_LLADDR(sender_addr);
-			LOG_DBG(", ID: %d\n", new_nb->number_id);
+			LOG_DBG(", ID: %d\n\r", new_nb->number_id);
 			
-			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
+			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n\r");
 
 		}
 		else
 		{
 			LOG_DBG("Address of hello (");
 			LOG_DBG_LLADDR(sender_addr);
-			LOG_DBG(") message received already!\n");
-			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
+			LOG_DBG(") message received already!\n\r");
+			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n\r");
 		}
 	}
 	else //TABLA LLENA (256)
-		LOG_WARN("The IoTorii neighbour table is full! \n");	
+		LOG_WARN("The IoTorii neighbour table is full! \n\r");	
 }
 
 
@@ -842,7 +838,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 {
 	LOG_DBG("A message received from ");
 	LOG_DBG_LLADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
-	LOG_DBG("\n");
+	LOG_DBG("\n\r");
 
 	hlmacaddr_t *received_hlmac_addr;
 	received_hlmac_addr = iotorii_extract_address(); //SE COGE LA DIRECCIÓN RECIBIDA
@@ -873,7 +869,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				if (linkaddr_cmp(&nb->addr, sender)) //SE BUSCA EN LA LISTA DE VECINOS LA DIRECCIÓN QUE HA ENVIADO EL MENSAJE 
 				{
 					memcpy(&nb->load, packetbuf_dataptr(), packetbuf_data_len); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
-					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\n", *p_load, str_sender);
+					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\n\r", *p_load, str_sender);
 					#if LOG_DBG_STATISTIC == 1
 						ctimer_set(&statistic_timer, 0, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS AUTOMÁTICAMENTE
 					#endif
@@ -902,7 +898,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						//if (*p_extra > 0) //LA CARGA RECIBIDA DEL HIJO ES POSITIVA Y HAY QUE MODIFICAR LA CARGA DEL NODO
 						node->load = node->load + *p_extra;
 						
-						printf("//INFO INCOMING SHARE// carga actual del nodo: %d\n", node->load);
+						printf("//INFO INCOMING SHARE// carga actual del nodo: %d\n\r", node->load);
 
 						n_hijos--; //SE RESTA EL HIJO DE LA CUENTA TOTAL DE HIJOS
 						
@@ -914,7 +910,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 							#endif
 
 							#if IOTORII_NODE_TYPE == 1
-								printf("FIN CONVERGENCIA\n");
+								printf("FIN CONVERGENCIA\n\r");
 							#endif
 						}						
 					}
@@ -932,7 +928,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 	else //ESTÁ ESPECIFICADA
 	{
 		char *new_hlmac_addr_str = hlmac_addr_to_str(*received_hlmac_addr);
-		printf("//INFO INCOMING HLMAC// HLMAC recibida: %s\n", new_hlmac_addr_str);
+		printf("//INFO INCOMING HLMAC// HLMAC recibida: %s\n\r", new_hlmac_addr_str);
 		free(new_hlmac_addr_str);
 
 		if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA AL HIJO
@@ -942,13 +938,16 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
 			{					
 				number_of_neighbours_flag = number_of_neighbours; //SE RESETEA PARA CADA ASIGNACIÓN DE HLMAC
-				LOG_DBG("New HLMAC address is assigned to the node.\n");
-				LOG_DBG("New HLMAC address is sent to the neighbours.\n");
+				LOG_DBG("New HLMAC address is assigned to the node.\n\r");
+				LOG_DBG("New HLMAC address is sent to the neighbours.\n\r");
 				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
+				#if IOTORII_NODE_TYPE == 2
+					ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+				#endif
 			}
 			else //NO SE HA ASIGNADO
 			{
-				LOG_DBG("New HLMAC address not added to the HLMAC table, and memory is free.\n");
+				LOG_DBG("New HLMAC address not added to the HLMAC table, and memory is free.\n\r");
 				
 				free(received_hlmac_addr->address);
 				received_hlmac_addr->address = NULL;
@@ -971,7 +970,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 		}
 		else
 		{
-			LOG_DBG("New HLMAC address not assigned to the node (loop), and memory is free.\n");
+			LOG_DBG("New HLMAC address not assigned to the node (loop), and memory is free.\n\r");
 			
 			free(received_hlmac_addr->address);
 			received_hlmac_addr->address = NULL;
@@ -981,7 +980,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 	}
 	
 	#if LOG_DBG_STATISTIC == 1
-	//printf("Periodic Statistics: node_id: %u, convergence_time_end\n", node_id);
+	//printf("Periodic Statistics: node_id: %u, convergence_time_end\n\r", node_id);
 	#endif
 }
 
@@ -1016,7 +1015,7 @@ static void iotorii_handle_sethlmac_timer ()
 	hlmactable_add(root_addr, timestamp);
 	
 	#if LOG_DBG_STATISTIC == 1
-	//printf("Periodic Statistics: node_id: %u, convergence_time_start\n", node_id);
+	//printf("Periodic Statistics: node_id: %u, convergence_time_start\n\r", node_id);
 	#endif
 	
 	iotorii_send_sethlmac(root_addr, linkaddr_node_addr, timestamp);
@@ -1049,58 +1048,41 @@ static void init (void)
 	on();
 	
 	#if IOTORII_NODE_TYPE == 1 //INFORMA QUE ES ROOT
-	LOG_INFO("This node operates as a root.\n");
+		LOG_INFO("This node operates as a root.\n\r");
 	#endif
 	
 	#if IOTORII_NODE_TYPE > 1 //INFORMA QUE ES NODO COMÚN
-	LOG_INFO("This node operates as a common node.\n ");
+		LOG_INFO("This node operates as a common node.\n\r ");
 	#endif
 	
 	#if IOTORII_NODE_TYPE > 0 //ROOT O NODO COMÚN
 
-	unsigned short seed_number;
-	uint8_t min_len_seed = sizeof(unsigned short) < LINKADDR_SIZE ?  sizeof(unsigned short) : LINKADDR_SIZE;
-	
-	memcpy(&seed_number, &linkaddr_node_addr, min_len_seed);
-	random_init(seed_number); //SE INICIALIZA UN SEED NUMBER DIFERENTE PARA CADA NODO
-	
-	#if LOG_DBG_DEVELOPER == 1
-	LOG_DBG("Seed is %2.2X (%d), sizeof(Seed) is %u\n", seed_number, seed_number, min_len_seed);
-	#endif
+		unsigned short seed_number;
+		uint8_t min_len_seed = sizeof(unsigned short) < LINKADDR_SIZE ?  sizeof(unsigned short) : LINKADDR_SIZE;
+		
+		memcpy(&seed_number, &linkaddr_node_addr, min_len_seed);
+		random_init(seed_number); //SE INICIALIZA UN SEED NUMBER DIFERENTE PARA CADA NODO
+		
+		#if LOG_DBG_DEVELOPER == 1
+			LOG_DBG("Seed is %2.2X (%d), sizeof(Seed) is %u\n\r", seed_number, seed_number, min_len_seed);
+		#endif
 
-	//SE PLANIFICA MENSAJE HELLO
-	//clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
-	hello_start_time = hello_start_time / 2 + (random_rand() % (hello_start_time / 2));
-	LOG_DBG("Scheduling a Hello message after %u ticks in the future\n", (unsigned)hello_start_time);
-	ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
+		//SE PLANIFICA MENSAJE HELLO
+		//clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
+		hello_start_time = hello_start_time / 2 + (random_rand() % (hello_start_time / 2));
+		LOG_DBG("Scheduling a Hello message after %u ticks in the future\n\r", (unsigned)hello_start_time);
+		ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
 
-	number_of_neighbours = 0;
-	number_of_neighbours_flag = 0;
-	hlmac_table_init(); //SE CREA LA TABLA DE VECINOS
-	
-	
+		number_of_neighbours = 0;
+		number_of_neighbours_flag = 0;
+		hlmac_table_init(); //SE CREA LA TABLA DE VECINOS
+		
 	#endif
 
 	#if IOTORII_NODE_TYPE == 1 //ROOT
 	//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT
 	//ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 	#endif
-
-
-	nrf_gpio_pin_mcu_select(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN), GPIO_PIN_CNF_MCUSEL_AppMCU);
-	nrf_gpio_pin_mcu_select(NRF_GPIO_PIN_MAP(NRF_LED2_PORT, NRF_LED2_PIN), GPIO_PIN_CNF_MCUSEL_AppMCU);
-	nrf_gpio_pin_mcu_select(NRF_GPIO_PIN_MAP(NRF_LED3_PORT, NRF_LED3_PIN), GPIO_PIN_CNF_MCUSEL_AppMCU);
-	nrf_gpio_pin_mcu_select(NRF_GPIO_PIN_MAP(NRF_LED4_PORT, NRF_LED4_PIN), GPIO_PIN_CNF_MCUSEL_AppMCU);
-	
-	nrf_gpio_cfg(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN), GPIO_PIN_CNF_DIR_Output, GPIO_PIN_CNF_INPUT_Disconnect, GPIO_PIN_CNF_PULL_Pullup, GPIO_PIN_CNF_DRIVE_S0S1, GPIO_PIN_CNF_SENSE_Disabled);
-	nrf_gpio_cfg(NRF_GPIO_PIN_MAP(NRF_LED2_PORT, NRF_LED2_PIN), GPIO_PIN_CNF_DIR_Output, GPIO_PIN_CNF_INPUT_Disconnect, GPIO_PIN_CNF_PULL_Pullup, GPIO_PIN_CNF_DRIVE_S0S1, GPIO_PIN_CNF_SENSE_Disabled);
-	nrf_gpio_cfg(NRF_GPIO_PIN_MAP(NRF_LED3_PORT, NRF_LED3_PIN), GPIO_PIN_CNF_DIR_Output, GPIO_PIN_CNF_INPUT_Disconnect, GPIO_PIN_CNF_PULL_Pullup, GPIO_PIN_CNF_DRIVE_S0S1, GPIO_PIN_CNF_SENSE_Disabled);
-	nrf_gpio_cfg(NRF_GPIO_PIN_MAP(NRF_LED4_PORT, NRF_LED4_PIN), GPIO_PIN_CNF_DIR_Output, GPIO_PIN_CNF_INPUT_Disconnect, GPIO_PIN_CNF_PULL_Pullup, GPIO_PIN_CNF_DRIVE_S0S1, GPIO_PIN_CNF_SENSE_Disabled);
-
-	nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN));
-	nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(NRF_LED2_PORT, NRF_LED2_PIN));
-	nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(NRF_LED3_PORT, NRF_LED3_PIN));
-	nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(NRF_LED4_PORT, NRF_LED4_PIN));
 
 }
 
@@ -1113,19 +1095,19 @@ static void input_packet (void) //SE RECIBE UN PAQUETE
 
 	if (packetbuf_datalen() == CSMA_ACK_LEN) //SE IGNORAN PAQUETES ACK
 	{
-		LOG_DBG("ignored ack\n");
+		LOG_DBG("ignored ack\n\r");
 	} 
 	else if (csma_security_parse_frame() < 0) //ERROR AL PARSEAR
 	{
-		LOG_ERR("failed to parse %u\n", packetbuf_datalen());
+		LOG_ERR("failed to parse %u\n\r", packetbuf_datalen());
 	} 
 	else if (!linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_node_addr) && !packetbuf_holds_broadcast()) //NO COINCIDE LA DIRECCIÓN
 	{
-		LOG_WARN("not for us\n");
+		LOG_WARN("not for us\n\r");
 	} 
 	else if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_SENDER), &linkaddr_node_addr)) //PAQUETE DEL PROPIO NODO
 	{
-		LOG_WARN("frame from ourselves\n");
+		LOG_WARN("frame from ourselves\n\r");
 	} 
 	else 
 	{
@@ -1137,7 +1119,7 @@ static void input_packet (void) //SE RECIBE UN PAQUETE
 		{
 			LOG_WARN("drop duplicate link layer packet from ");
 			LOG_WARN_LLADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
-			LOG_WARN_(", seqno %u\n", packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO));
+			LOG_WARN_(", seqno %u\n\r", packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO));
 		} 
 		else 
 		{
@@ -1158,7 +1140,7 @@ static void input_packet (void) //SE RECIBE UN PAQUETE
 		{
 			LOG_INFO("received packet from ");
 			LOG_INFO_LLADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
-			LOG_INFO_(", seqno %u, len %u\n", packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO), packetbuf_datalen());
+			LOG_INFO_(", seqno %u, len %u\n\r", packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO), packetbuf_datalen());
 
 			#if IOTORII_NODE_TYPE == 0
 			NETSTACK_NETWORK.input();
@@ -1227,7 +1209,7 @@ void list_this_node_entry (payload_entry_t *a, hlmacaddr_t *addr)
 		new_address->load = random_rand() % 200; //CARGA ALEATORIA (SE HA IMPUESTO UN MAX DE 180)
 		
 		list_add(node_list, new_address); 
-		printf("[addr: %s | top_addr: %s | payload/hops: %d | node_load: %d]\n", new_address->str_addr, new_address->str_top_addr, new_address->nhops, new_address->load);
+		printf("[addr: %s | top_addr: %s | payload/hops: %d | node_load: %d]\n\r", new_address->str_addr, new_address->str_top_addr, new_address->nhops, new_address->load);
 		aux = aux->next;
 	}
 }
