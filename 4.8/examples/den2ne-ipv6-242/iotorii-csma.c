@@ -56,7 +56,7 @@
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
 	#define IOTORII_HELLO_IDLE_TIME IOTORII_CONF_HELLO_IDLE_TIME
 #else
-	#define IOTORII_HELLO_IDLE_TIME 15 //Default Delay is 60 s
+	#define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 60 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
@@ -223,7 +223,6 @@ udp_rx_callback(struct simple_udp_connection *c,
          uint16_t receiver_port,
          const uint8_t *data,
          uint16_t datalen){
-	printf("Mensaje recibido\r\n");
 	if(datalen==5)
 		iotorii_handle_incoming_hello_ipv6(sender_addr);
 	else
@@ -376,7 +375,7 @@ void iotorii_handle_load_timer_ipv6 ()
 			first_edge_sent = 1;
 
 		#if LOG_DBG_STATISTIC == 1		
-		printf("//INFO HANDLE LOAD// carga enviada: %d de direccion %s\r\n", node->load, node->str_addr); 
+			printf("//INFO HANDLE LOAD// carga enviada: %d de direccion %s\r\n", node->load, node->str_addr); 
 		#endif
 
 		udp_conn.udp_conn->lport=15650;
@@ -461,7 +460,7 @@ void iotorii_handle_share_upstream_timer_ipv6 ()
 	
 	start_share = 1; // ANTES
 	#if LOG_DBG_STATISTIC == 1
-	ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+		ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 	#endif
 }
 
@@ -476,7 +475,7 @@ static void iotorii_handle_statistic_timer_ipv6 ()
 	node = list_head(node_list); 
 	neighbour_table_entry_t_ipv6 *nb;
 	
-	if(node!=NULL){
+	if(number_of_neighbours!=0){
 		if (start_share == 0 && msg_share_on == 0)
 		{
 			//printf("Periodic Statistics: node_id: %u, n_hello: %d, n_sethlmac: %d, n_neighbours: %d\r\n", node_id, number_of_hello_messages, number_of_sethlmac_messages, number_of_neighbours);
@@ -575,24 +574,20 @@ void check_neighbours_hello (list_t list){
 static void iotorii_handle_hello_timer ()
 {	
 	#if IOTORII_LED == 1
-    	nrf_gpio_pin_toggle(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN));
+		nrf_gpio_pin_toggle(NRF_GPIO_PIN_MAP(NRF_LED1_PORT, NRF_LED1_PIN));
 	#endif
 	udp_conn.udp_conn->lport=15650;
 	simple_udp_sendto(&udp_conn, "hello", strlen("hello"), &dest_ipaddr);
 	printf("//INFO HANDLE HELLO// Mensaje Hello enviado\r\n");
-
-	
-	#if LOG_DBG_STATISTIC == 1
-	number_of_hello_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES HELLO
-	#endif
 		
 	#if IOTORII_NODE_TYPE == 1 //ROOT
-	ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+		ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
 	#endif
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 
 	#if LOG_DBG_STATISTIC == 1
-	check_neighbours_hello(neighbour_table_entry_list);
+		number_of_hello_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES HELLO
+		check_neighbours_hello(neighbour_table_entry_list);
 	#endif
 }
 
@@ -813,7 +808,15 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 			free(random_list);
 			random_list = NULL;
 		}
-	} //END if number_of_neighbours_new
+	} else { //END if number_of_neighbours_new (EN CASO DE TENER UN SOLO VECINO)
+	
+		//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
+		payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
+		payload_entry->next = NULL;
+		payload_entry->payload = NULL;
+		payload_entry->data_len = 0;
+		list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
+	}
 }
 
 
@@ -950,7 +953,7 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 					memcpy(&nb->load, data, datalen); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
 					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo %s\r\n", *p_load, sender_ip);
 					#if LOG_DBG_STATISTIC == 1
-					ctimer_set(&statistic_timer, 0, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS AUTOMÁTICAMENTE
+						ctimer_set(&statistic_timer, 0, iotorii_handle_statistic_timer_ipv6, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS AUTOMÁTICAMENTE
 					#endif
 				}
 			}
@@ -1070,16 +1073,16 @@ void iotorii_handle_incoming_sethlmac_or_load_ipv6 (const uip_ipaddr_t *sender_a
 
 void iotorii_operation (void)
 {
-	if (packetbuf_holds_broadcast())
-	{
-		//if (hello identification) 
-		if (packetbuf_datalen() == 0) //SI LA LONGITUD ES NULA, SE HA RECIBIDO UN PAQUETE HELLO
-			iotorii_handle_incoming_hello(); //SE PROCESA PAQUETE HELLO
+	// if (packetbuf_holds_broadcast())
+	// {
+	// 	//if (hello identification) 
+	// 	if (packetbuf_datalen() == 0) //SI LA LONGITUD ES NULA, SE HA RECIBIDO UN PAQUETE HELLO
+	// 		iotorii_handle_incoming_hello(); //SE PROCESA PAQUETE HELLO
 	
-		//else if (SetHLMAC identification or LOAD)
-		// else //SI NO ES NULA, SE HA RECIBIDO UN PAQUETE SETHLMAC
-		// 	iotorii_handle_incoming_sethlmac_or_load(); //SE PROCESA PAQUETE SETHLMAC
-	}
+	// 	//else if (SetHLMAC identification or LOAD)
+	// 	else //SI NO ES NULA, SE HA RECIBIDO UN PAQUETE SETHLMAC
+	// 		iotorii_handle_incoming_sethlmac_or_load(); //SE PROCESA PAQUETE SETHLMAC
+	// }
 }
 
 
@@ -1213,6 +1216,7 @@ static void input_packet (void) //SE RECIBE UN PAQUETE
 	{
 		LOG_ERR("failed to parse %u\r\n", packetbuf_datalen());
 	} 
+	//else if (!linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_node_addr) && !packetbuf_holds_broadcast()) //NO COINCIDE LA DIRECCIÓN
 	else if (!linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_node_addr) && !packetbuf_holds_broadcast()) //NO COINCIDE LA DIRECCIÓN
 	{
 		LOG_WARN("not for us\r\n");
@@ -1257,7 +1261,8 @@ static void input_packet (void) //SE RECIBE UN PAQUETE
 			#if IOTORII_NODE_TYPE == 0
 				NETSTACK_NETWORK.input();
 			#elif IOTORII_NODE_TYPE > 0
-				iotorii_operation();
+				//iotorii_operation();
+				NETSTACK_NETWORK.input();
 			#endif
 		}
 	}

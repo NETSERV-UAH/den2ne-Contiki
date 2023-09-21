@@ -36,7 +36,7 @@
 #ifdef IOTORII_CONF_HELLO_START_TIME
 	#define IOTORII_HELLO_START_TIME IOTORII_CONF_HELLO_START_TIME
 #else
-	#define IOTORII_HELLO_START_TIME 5 //Default Delay is 2 s
+	#define IOTORII_HELLO_START_TIME 30 //Default Delay is 2 s
 #endif
 
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
@@ -435,8 +435,8 @@ static void iotorii_handle_statistic_timer ()
 	this_node_t *node;
 	node = list_head(node_list); 
 	neighbour_table_entry_t *nb;
-	
-	if(node!=NULL){
+
+	if(number_of_neighbours!=0){
 		if (start_share == 0 && msg_share_on == 0)
 		{
 			printf("Periodic Statistics: node_id: %u, n_hello: %d, n_sethlmac: %d, n_neighbours: %d\n\r", node_id, number_of_hello_messages, number_of_sethlmac_messages, number_of_neighbours);
@@ -514,7 +514,7 @@ static void iotorii_handle_statistic_timer ()
 			msg_share_on = 1;
 		else
 			printf("//INFO STATISTICS// Faltan %d nodos por conocer su carga\n\r", load_null);
-	}
+	//}
 }
 
 //ELIMINA LOS VECINOS DE LOS CUALES NO SE HA RECIBIDO HELLO EN LOS ÚLTIMOS HELLO ENVIADOS
@@ -635,6 +635,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				#endif
 			}
 		}
+		printf("Number of neighbours new: %d\n\r", number_of_neighbours_new);
 
 		if (number_of_neighbours_new > 0)
 		{
@@ -724,6 +725,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				payload_entry->next = NULL;
 				payload_entry->payload = packetbuf_ptr_head;
 				payload_entry->data_len = datalen_counter;
+				list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
 
 				
 				if (!list_head(payload_entry_list)) //ANTES DE AÑADIR LA ENTRADA DE PAYLOAD A LA LISTA SE COMPRUEBA SI LA LISTA ESTA VACÍA PARA CONFIGURAR EL TIEMPO
@@ -741,15 +743,12 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					
 					list_add(payload_entry_list, payload_entry); //SE AÑADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
 					
-					#if IOTORII_NODE_TYPE == 1
-						ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL); //SET TIMER
-					#endif
+					//#if IOTORII_NODE_TYPE == 1
+					ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL); //SET TIMER
+					//#endif
 				}
 				else //SI NO ESTÁ VACÍA NO SE CONFIGURA EL TIEMPO Y DIRECTAMENTE SE AÑADE LA ENTRADA DE PAYLOAD
 					list_add(payload_entry_list, payload_entry);
-					
-				list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA	
-				
 
 				char *neighbour_hlmac_addr_str = hlmac_addr_to_str(addr);
 				printf("SetHLMAC prefix (addr:%s) added to queue to advertise to %d nodes.\n\r", neighbour_hlmac_addr_str, i-1);
@@ -771,7 +770,15 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				free(random_list);
 				random_list = NULL;
 			}
-		} //END if number_of_neighbours_new
+		} else { //END if number_of_neighbours_new (EN CASO DE TENER UN SOLO VECINO)
+
+			//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
+			payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
+			payload_entry->next = NULL;
+			payload_entry->payload = NULL;
+			payload_entry->data_len = 0;
+			list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
+		}
 	} // END else
 
 	//ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
@@ -855,7 +862,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 	{				
 		int packetbuf_data_len = packetbuf_datalen();
 	
-		if (packetbuf_data_len == 8)
+		if (packetbuf_data_len == 4)
 		{
 			
 			int *p_load = (int *) malloc (sizeof(int));
