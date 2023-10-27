@@ -41,3 +41,6 @@
 4.8/examples/den2ne-nrf/root-52840/build/
 4.8/examples/den2ne-nrf/common-node-5340/build/
 4.8/examples/den2ne-nrf/common-node-52840/build/
+4.8/examples/den2ne-ipv6-mcast/common-node/build/
+4.8/examples/den2ne-ipv6-mcast/root/build/
+4.8/examples/multicast/build/

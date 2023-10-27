@@ -1226,6 +1226,7 @@ uip_process(uint8_t flag)
    */
 #if UIP_IPV6_MULTICAST
   if(uip_is_addr_mcast_routable(&UIP_IP_BUF->destipaddr)) {
+    printf("Multicast recibido\n\r");
     if(UIP_MCAST6.in() == UIP_MCAST6_ACCEPT) {
       /* Deliver up the stack */
       goto process;

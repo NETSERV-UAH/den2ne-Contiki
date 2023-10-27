@@ -114,33 +114,17 @@ iotorii_set_prefix(uip_ipaddr_t *prefix, uip_ipaddr_t *iid)
   }
 }
 /*---------------------------------------------------------------------------*/
-void
-rpl_dag_root_set_prefix(uip_ipaddr_t *prefix, uip_ipaddr_t *iid)
-{
-  static uint8_t initialized = 0;
-
-  if(!initialized) {
-    set_global_address(prefix, iid);
-    initialized = 1;
-  }
-}
 int
 iotorii_root_start(void)
 {
   /*struct uip_ds6_addr *root_if;
   int i;
   uint8_t state;
-  uip_ipaddr_t *ipaddr = NULL;*/
-  
-  // NECESSARY FOR BROADCAST
-  static uint8_t initialized = 0;
+  uip_ipaddr_t *ipaddr = NULL;
 
-  if(!initialized) {
-    set_global_address(NULL, NULL);
-    initialized = 1;
-  }
+  rpl_dag_root_set_prefix(NULL, NULL);
 
-  /*for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
+  for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
     state = uip_ds6_if.addr_list[i].state;
     if(uip_ds6_if.addr_list[i].isused &&
        state == ADDR_PREFERRED &&

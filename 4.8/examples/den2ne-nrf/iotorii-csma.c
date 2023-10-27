@@ -514,7 +514,7 @@ static void iotorii_handle_statistic_timer ()
 			msg_share_on = 1;
 		else
 			printf("//INFO STATISTICS// Faltan %d nodos por conocer su carga\n\r", load_null);
-	//}
+	}
 }
 
 //ELIMINA LOS VECINOS DE LOS CUALES NO SE HA RECIBIDO HELLO EN LOS ÚLTIMOS HELLO ENVIADOS
@@ -770,15 +770,16 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				free(random_list);
 				random_list = NULL;
 			}
-		} else { //END if number_of_neighbours_new (EN CASO DE TENER UN SOLO VECINO)
+		} 
+		// else { //END if number_of_neighbours_new (EN CASO DE TENER UN SOLO VECINO)
 
-			//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
-			payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
-			payload_entry->next = NULL;
-			payload_entry->payload = NULL;
-			payload_entry->data_len = 0;
-			list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
-		}
+		// 	//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
+		// 	payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
+		// 	payload_entry->next = NULL;
+		// 	payload_entry->payload = NULL;
+		// 	payload_entry->data_len = 0;
+		// 	list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
+		// }
 	} // END else
 
 	//ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS

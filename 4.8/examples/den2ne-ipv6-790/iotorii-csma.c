@@ -808,15 +808,16 @@ void iotorii_send_sethlmac_ipv6 (hlmacaddr_t addr, const uip_ipaddr_t *sender_ad
 			free(random_list);
 			random_list = NULL;
 		}
-	} else { //END if number_of_neighbours_new (EN CASO DE TENER UN SOLO VECINO)
+	} 
+	// else { //END if number_of_neighbours_new (EN CASO DE TENER UN SOLO VECINO)
 
-		//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
-		payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
-		payload_entry->next = NULL;
-		payload_entry->payload = NULL;
-		payload_entry->data_len = 0;
-		list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
-	}
+	// 	//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
+	// 	payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
+	// 	payload_entry->next = NULL;
+	// 	payload_entry->payload = NULL;
+	// 	payload_entry->data_len = 0;
+	// 	list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
+	// }
 }
 
 

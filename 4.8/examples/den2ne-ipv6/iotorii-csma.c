@@ -1319,7 +1319,7 @@ static void init (void)
 	#endif
 	
 	
-	uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x708);
+	uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x709);
 	uip_ip6addr(&dest_ipaddr2, 0xFD03,0,0,0,0x302,0x304,0x506,0x710);
 	uip_ip6addr(&dest_ipaddr3, 0xFD03,0,0,0,0x302,0x304,0x506,0x711);
 	simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);

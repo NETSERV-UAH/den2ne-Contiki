@@ -58,7 +58,7 @@
 
 /* Start sending messages START_DELAY secs after we start so that routing can
  * converge */
-#define START_DELAY 60
+#define START_DELAY 5
 
 static struct uip_udp_conn * mcast_conn;
 static char buf[MAX_PAYLOAD_LEN];
