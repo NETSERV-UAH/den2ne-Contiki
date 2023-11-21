@@ -622,17 +622,19 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 
 		uint8_t number_of_neighbours_new = number_of_neighbours;
 
-		for (neighbour_entry = list_head(neighbour_table_entry_list); neighbour_entry != NULL; neighbour_entry = list_item_next(neighbour_entry))
-		{			
-			if (linkaddr_cmp(&neighbour_entry->addr, &sender_link_address)) //SE BORRA EL NODO EMISOR DEL MENSAJE SETHLMAC RECIBIDO DEL NUEVO PAYLOAD
-			{
-				number_of_neighbours_new = number_of_neighbours - 1;
-				
-				#if LOG_DBG_DEVELOPER == 1
-				LOG_DBG("Sender node is in neighbour list, number_of_neighbours: %u, number_of_neighbours_new: %u.\n", number_of_neighbours, number_of_neighbours_new);
-				#endif
-			}
-		}
+		// if (number_of_neighbours != 1){
+			for (neighbour_entry = list_head(neighbour_table_entry_list); neighbour_entry != NULL; neighbour_entry = list_item_next(neighbour_entry))
+			{			
+				if (linkaddr_cmp(&neighbour_entry->addr, &sender_link_address)) //SE BORRA EL NODO EMISOR DEL MENSAJE SETHLMAC RECIBIDO DEL NUEVO PAYLOAD
+				{
+					number_of_neighbours_new = number_of_neighbours - 1;
+					
+					#if LOG_DBG_DEVELOPER == 1
+					LOG_DBG("Sender node is in neighbour list, number_of_neighbours: %u, number_of_neighbours_new: %u.\n", number_of_neighbours, number_of_neighbours_new);
+					#endif
+				}
+			} 
+		// }
 
 		if (number_of_neighbours_new > 0)
 		{
@@ -769,7 +771,15 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				free(random_list);
 				random_list = NULL;
 			}
-		} //END if number_of_neighbours_new
+		}//END if number_of_neighbours_new
+		else { //SOLO TIENE 1 VECINO DEL QUE RECIBIÓ LA ASIGNACIÓN
+			payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
+			uint8_t zero_payload = 0, zero_length = 0;
+			payload_entry->next = NULL;
+			payload_entry->payload = &zero_payload;
+			payload_entry->data_len = &zero_length;
+			list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
+		}
 	} // END else
 
 	ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS

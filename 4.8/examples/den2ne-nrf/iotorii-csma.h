@@ -55,7 +55,7 @@ struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA
 {
 	struct neighbour_table_entry *next;
 	linkaddr_t addr;
-	uint32_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
+	uint16_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
 	uint8_t number_id;
 	int flag; //FLAG PADRE/HIJO OUTPUT/INPUT
 	uint16_t load; //CARGA DE CADA NODO

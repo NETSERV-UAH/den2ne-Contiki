@@ -136,8 +136,8 @@ static struct ctimer share_timer;
 
 #if LOG_DBG_STATISTIC == 1
 static struct ctimer statistic_timer;
-int number_of_hello_messages = 0;
-int number_of_sethlmac_messages = 0;
+uint16_t number_of_hello_messages = 0;
+uint16_t number_of_sethlmac_messages = 0;
 
 int number_of_load_edge_messages = 0;
 int number_of_load_no_edge_messages = 0;

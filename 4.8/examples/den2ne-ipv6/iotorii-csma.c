@@ -49,7 +49,7 @@
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
 	#define IOTORII_HELLO_IDLE_TIME IOTORII_CONF_HELLO_IDLE_TIME
 #else
-	#define IOTORII_HELLO_IDLE_TIME 30 //Default Delay is 60 s
+	#define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 60 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
@@ -127,8 +127,8 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 
 	#if LOG_DBG_STATISTIC == 1
 		static struct ctimer statistic_timer;
-		int number_of_hello_messages = 0;
-		int number_of_sethlmac_messages = 0;
+		uint16_t number_of_hello_messages = 0;
+		uint16_t number_of_sethlmac_messages = 0;
 
 		int number_of_load_edge_messages = 0;
 		int number_of_load_no_edge_messages = 0;
