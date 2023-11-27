@@ -166,7 +166,7 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 	uint8_t msg_share_on = 0;
 	uint8_t new_edge = 0; //MARCA COMO EDGE UN NODO NO EDGE QUE YA HA REPARTIDO SU CARGA
 
-	uint16_t extra_load = 0; //INDICA CUANTA CARGA SOBRA SI UN NODO TIENE UNA CANTIDAD MAYOR A 100 
+	short extra_load = 0; //INDICA CUANTA CARGA SOBRA SI UN NODO TIENE UNA CANTIDAD MAYOR A 100 
 	uint16_t new_extra_load = 0; //INDICA CUANTA CARGA DEL TOTAL SOBRANTE SE ENVÍA AL PADRE
 
 	uint8_t edge_complete_load = 0; //INDICA A 1 QUE SE ACTIVA EN LA SEGUNDA VUELTA LA RECEPCIÓN DE CARGA EN LOS EDGE PARA CONSEGUIR CARGA = 100
@@ -387,11 +387,15 @@ void iotorii_handle_share_upstream_timer ()
 			extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 			
 			printf("//INFO HANDLE SHARE UP// En este nodo sobra una carga de %d\n", extra_load);		
 		}
-		else //node->load <= 100 
+		else //node->load <= 100
 		{
-			extra_load = 100 - node->load; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 
-			if (node->load < 0)
+			if (node->load > 0)
+				extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 
+			else
+			{
+				extra_load = -node->load + 100;
 				extra_load = -extra_load;
+			}
 			
 			printf("//INFO HANDLE SHARE UP// En este nodo permite una carga adicional de valor %d\n", -extra_load);
 		}

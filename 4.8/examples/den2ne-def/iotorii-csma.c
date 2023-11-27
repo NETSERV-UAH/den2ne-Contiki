@@ -161,7 +161,7 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 	//uint8_t msg_share_on = 0;
 	//uint8_t new_edge = 0; //MARCA COMO EDGE UN NODO NO EDGE QUE YA HA REPARTIDO SU CARGA
 
-	uint16_t extra_load = 0; //INDICA CUANTA CARGA SOBRA SI UN NODO TIENE UNA CANTIDAD MAYOR A 100 
+	short extra_load = 0; //INDICA CUANTA CARGA SOBRA SI UN NODO TIENE UNA CANTIDAD MAYOR A 100 
 	//uint16_t new_extra_load = 0; //INDICA CUANTA CARGA DEL TOTAL SOBRANTE SE ENVÍA AL PADRE
 
 	//uint8_t edge_complete_load = 0; //INDICA A 1 QUE SE ACTIVA EN LA SEGUNDA VUELTA LA RECEPCIÓN DE CARGA EN LOS EDGE PARA CONSEGUIR CARGA = 100
@@ -349,73 +349,48 @@ void iotorii_handle_share_upstream_timer ()
 	neighbour_table_entry_t *nb;
 	nb = list_head(neighbour_table_entry_list);
 	
-	//msg_share_on = 1;
-	//uint8_t one_time = 0; //VARIABLE UTILIZADA CUANDO EXISTEN DOS HIJOS QUE PUEDEN ABSORBER CARGA, PARA QUE SOLO ELIJA A 1
-	//uint8_t n_hijos_to_send = 0; //CUENTA DEL NÚMERO DE NODOS HIJOS CON CARGA < 100
-	//uint8_t n_hijos_to_send_ready = 0;
 	
 	//FLUJOS DE TRÁFICO UPWARD: DESDE LOS EDGE HACIA EL DODAG (NODO ROOT)
 	//TODOS LOS NODOS SE QUEDAN CON UNA CARGA DE 100 
-	// if ((edge == 1 || new_edge == 1) && start_share == 0)
-	// {		
-		// if (node->load > 100)
-		// {
-		// 	extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 			
-		// 	printf("//INFO HANDLE SHARE UP// En este nodo sobra una carga de %d\n", extra_load);		
-		// }
-		
-		// else //node->load <= 100
-		// {
-		// 	if (node->load > 0)
-		// 		extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 
-		// 	else
-		// 	{
-		// 		extra_load = -node->load + 100;
-		// 		extra_load = -extra_load;
-		// 	}
-			
-		// 	printf("//INFO HANDLE SHARE UP// En este nodo permite una carga adicional de valor %d\n", -extra_load);
-		// }
-
-		if (node->load > 100)
+	if (node->load > 100)
+	{
+		extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 			
+		printf("//INFO HANDLE SHARE UP// En este nodo sobra una carga de %d\n", extra_load);		
+	}
+	else //node->load <= 100
+	{
+		if (node->load > 0)
+			extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 
+		else
 		{
-			extra_load = node->load - 100; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 			
-			printf("//INFO HANDLE SHARE UP// En este nodo sobra una carga de %d\n", extra_load);		
-		}
-		else //node->load <= 100 
-		{
-			extra_load = 100 - node->load; //SE QUITA LA CARGA SOBRANTE Y SE ALMACENA 
-			if (node->load < 0)
-				extra_load = -extra_load;
-			
-			printf("//INFO HANDLE SHARE UP// En este nodo permite una carga adicional de valor %d\n", -extra_load);
+			extra_load = -node->load + 100;
+			extra_load = -extra_load;
 		}
 		
-		#if IOTORII_NODE_TYPE == 2
-			node->load = 100; //SE ASIGNA COMO MÁXIMO UNA CANTIDAD DE 100 PARA NODOS COMUNES
-		#endif
-		
-		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
-		{
-			if (nb->flag == 1)
-			{
-				nb->in_out = -extra_load;
-				packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
-				
-				memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
-				packetbuf_set_datalen(sizeof(extra_load));									
-				packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-			
-				printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\n", node->load);
-				printf("//INFO HANDLE SHARE UP// Carga informada: %d\n", extra_load); 
-			}	
-		}
-		
-		send_packet(NULL, NULL);
-	// }
+		printf("//INFO HANDLE SHARE UP// En este nodo permite una carga adicional de valor %d\n", -extra_load);
+	}
 	
-	//start_share = 1; // ANTES
-	//ctimer_set(&statistic_timer, IOTORII_STATISTICS2_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	#if IOTORII_NODE_TYPE == 2
+		node->load = 100; //SE ASIGNA COMO MÁXIMO UNA CANTIDAD DE 100 PARA NODOS COMUNES
+	#endif
+	
+	for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+	{
+		if (nb->flag == 1)
+		{
+			nb->in_out = -extra_load;
+			packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
+			
+			memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
+			packetbuf_set_datalen(sizeof(extra_load));									
+			packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+		
+			printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\n", node->load);
+			printf("//INFO HANDLE SHARE UP// Carga informada: %d\n", extra_load); 
+		}	
+	}
+	
+	send_packet(NULL, NULL);
 }
 
 
