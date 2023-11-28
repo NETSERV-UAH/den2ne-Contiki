@@ -58,8 +58,8 @@ struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA
 	uint16_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
 	uint8_t number_id;
 	int flag; //FLAG PADRE/HIJO OUTPUT/INPUT
-	uint16_t load; //CARGA DE CADA NODO
-	uint16_t in_out; //PUERTOS DE CARGA IN/OUT
+	int load; //CARGA DE CADA NODO
+	short in_out; //PUERTOS DE CARGA IN/OUT
 };
 
 typedef struct neighbour_table_entry neighbour_table_entry_t;

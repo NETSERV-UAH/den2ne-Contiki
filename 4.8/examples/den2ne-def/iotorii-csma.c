@@ -326,9 +326,8 @@ void iotorii_handle_load_timer ()
 		
 		//memcpy(packetbuf_dataptr(), &(node->load), sizeof(&node->load)); //SE COPIA LOAD
 		memcpy(packetbuf_dataptr(), &(node->load), sizeof(node->load)); //SE COPIA LOAD  
-		packetbuf_set_datalen(sizeof(&node->load));									
+		packetbuf_set_datalen(sizeof(node->load));									
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-
 		// if (edge == 1 && first_edge_sent == 0)
 		// 	first_edge_sent = 1;
 
@@ -384,7 +383,7 @@ void iotorii_handle_share_upstream_timer ()
 			memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
 			packetbuf_set_datalen(sizeof(extra_load));									
 			packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-		
+
 			printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\n", node->load);
 			printf("//INFO HANDLE SHARE UP// Carga informada: %d\n", extra_load); 
 		}	
@@ -725,10 +724,11 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 		}//END if number_of_neighbours_new
 		else { //SOLO TIENE 1 VECINO DEL QUE RECIBIÃ“ LA ASIGNACIÃ“N
 			payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
-			uint8_t zero_payload = 0, zero_length = 0;
+			uint8_t zero_payload = 0;
+			int zero_length = 0;
 			payload_entry->next = NULL;
 			payload_entry->payload = &zero_payload;
-			payload_entry->data_len = &zero_length;
+			payload_entry->data_len = zero_length;
 			list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA
 		}
 	} // END else
@@ -813,12 +813,12 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÃ
 	if (hlmac_is_unspecified_addr(*received_hlmac_addr)) //SI NO SE ESPECIFICA DIRECCIÃ“N, NO HAY PARA EL NODO
 	{				
 		int packetbuf_data_len = packetbuf_datalen();
-	
-		if (packetbuf_data_len == 8) //LOAD
+
+		if (packetbuf_data_len == 4) //LOAD
 		{
 			
 			int *p_load = (int *) malloc (sizeof(int));
-			memcpy(p_load, packetbuf_dataptr(), sizeof(int)); //COPIA DEL BUFFER 
+			memcpy(p_load, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER 
 			
 			char* str_sender = (char*) malloc (sizeof(char) * (LINKADDR_SIZE * (2 + 1) + 1));
 			str_sender = link_addr_to_str (sender_link_address, 1);	//LENGTH = 1 PARA MOSTRAR SOLO EL ID
@@ -852,7 +852,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÃ
 		
 		else if (packetbuf_data_len == 2) //SHARE
 		{			
-			uint16_t *p_extra = (uint16_t *) malloc (sizeof(uint16_t));
+			short *p_extra = (short *) malloc (sizeof(short));
 			memcpy(p_extra, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER LA CARGA SOBRANTE QUE HA ENVIADO EL NODO
 			
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
