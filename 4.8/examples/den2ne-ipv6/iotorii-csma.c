@@ -341,7 +341,7 @@ uint32_t iotorii_extract_timestamp_ipv6 (const uint8_t *data) //SE EXTRAE EL TIM
     uint32_t timestamp;
 	
 	//SE LEE EL PAYLOAD
-	memcpy(&timestamp, data, sizeof(uint32_t)); //COPIA EL TIMESATMP
+	memcpy(&timestamp, data, sizeof(uint32_t)); //COPIA EL TIMESTAMP
 	
 	/* The payload structure:
 	* +-----------+------------+--------+-----+------+-----+-----+------+
