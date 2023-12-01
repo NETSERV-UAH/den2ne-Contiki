@@ -158,7 +158,14 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 	static void iotorii_handle_sethlmac_timer ();
 #endif
 
-static void iotorii_handle_statistic_timer ();
+#if IOTORII_IPV6 == 1 //IPv6
+	static void iotorii_handle_statistic_timer ();
+	void iotorii_handle_incoming_hello (const uip_ipaddr_t *sender_addr);
+	void iotorii_handle_incoming_sethlmac_or_load (const uip_ipaddr_t *sender_addr, const uint8_t *data, uint16_t datalen);
+#else
+	static void iotorii_handle_statistic_timer ();
+#endif
+
 clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
 clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
 int number_of_neighbours;
@@ -226,8 +233,6 @@ static int max_payload (void)
 
 	#define UDP_PORT	8765
 	static struct simple_udp_connection udp_conn;
-	static uint32_t rx_count = 0;
-	static char str[32];
 	uip_ipaddr_t dest_ipaddr;
 	static void
 	udp_rx_callback(struct simple_udp_connection *c,
@@ -251,7 +256,7 @@ static int max_payload (void)
 #if IOTORII_IPV6 == 1 //IPv6
 hlmacaddr_t *iotorii_extract_address (const uip_ipaddr_t *sender_addr, const uint8_t *data, uint16_t datalen) //SE EXTRAE LA DIRECCIÓN DEL NODO EMISOR A PARTIR DEL PAQUETE RECIBIDO
 {
-	uint8_t *packetbuf_ptr = data; //PUNTERO A COPIA DEL BUFFER
+	const uint8_t *packetbuf_ptr = data; //PUNTERO A COPIA DEL BUFFER
     uip_ipaddr_t node_addr;		//DIRECCIÓN IP PARA COMPARAR
 	uip_ip6addr(&node_addr, 0,0,0,0,0,0,0,0);
 	uip_ipaddr_t local_addr;	//DIRECCIÓN IP DEL PROCESO NATIVO
@@ -638,6 +643,7 @@ void iotorii_handle_send_sethlmac_timer ()
 void iotorii_send_sethlmac (hlmacaddr_t addr, const uip_ipaddr_t *sender_addr, uint32_t timestamp)
 {
 	int mac_max_payload = IPv6_MAX_PAYLOAD;
+	neighbour_table_entry_t_ipv6 *neighbour_entry;
 
 #else
 void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, uint32_t timestamp)
@@ -649,8 +655,8 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 	
 	else
 	{
-#endif
 		neighbour_table_entry_t *neighbour_entry;
+#endif
 
 		#if LOG_DBG_DEVELOPER == 1 
 		LOG_DBG("Info before sending SetHLMAC: ");
@@ -877,7 +883,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 
 
 #if IOTORII_IPV6 == 1 //IPv6
-void iotorii_handle_incoming_hello_ipv6 (const uip_ipaddr_t *sender_addr) //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
+void iotorii_handle_incoming_hello (const uip_ipaddr_t *sender_addr) //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 {
 	char *sender_ip=(char *) malloc (sizeof(char) * 32);
 	size_t size=32;
@@ -936,18 +942,26 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			
 			list_add(neighbour_table_entry_list, new_nb); //SE AÑADE A LA LISTA
 			
-			LOG_DBG("A new neighbour added to IoTorii neighbour table, address: ");
-			LOG_DBG_LLADDR(sender_addr);
-			LOG_DBG(", ID: %d\n", new_nb->number_id);
+			#if IOTORII_IPV6 == 1 //IPv6
+				LOG_DBG("A new neighbour added to IoTorii neighbour table, address: %s, ID: %d\n", sender_ip, new_nb->number_id);
+			#else
+				LOG_DBG("A new neighbour added to IoTorii neighbour table, address: ");
+				LOG_DBG_LLADDR(sender_addr);
+				LOG_DBG(", ID: %d\n", new_nb->number_id);
+			#endif
 			
 			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
 
 		}
 		else
 		{
-			LOG_DBG("Address of hello (");
-			LOG_DBG_LLADDR(sender_addr);
-			LOG_DBG(") message received already!\n");
+			#if IOTORII_IPV6 == 1 //IPv6
+				LOG_DBG("Address of hello (%s) message received already!\n", sender_ip);
+			#else
+				LOG_DBG("Address of hello (");
+				LOG_DBG_LLADDR(sender_addr);
+				LOG_DBG(") message received already!\n");
+			#endif
 			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\n");
 		}
 	}
@@ -1290,7 +1304,7 @@ static void iotorii_handle_sethlmac_timer ()
 	#if IOTORII_IPV6 == 1 //IPv6
 		uip_ipaddr_t local_addr;
 		uip_ds6_select_src(&local_addr, &dest_ipaddr);
-		iotorii_send_sethlmac_ipv6(root_addr, &local_addr, timestamp);
+		iotorii_send_sethlmac(root_addr, &local_addr, timestamp);
 	#else
 		iotorii_send_sethlmac(root_addr, linkaddr_node_addr, timestamp);
 	#endif
@@ -1347,6 +1361,13 @@ static void init (void)
 		number_of_neighbours = 0;
 		number_of_neighbours_flag = 0;
 		hlmac_table_init(); //SE CREA LA TABLA DE VECINOS
+	#endif
+
+
+	#if IOTORII_IPV6 == 1 //IPv6
+		uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x709);
+		simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);
+		udp_conn.udp_conn->ttl=10;
 	#endif
 }
 

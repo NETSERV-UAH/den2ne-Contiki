@@ -14,12 +14,14 @@
 #include "net/mac/mac.h"
 #include "dev/radio.h"
 
+#include "net/ipv6/uip.h"
+
 /*---------------------------------------------------------------------------*/
 
 #ifdef IOTORII_CONF_IPV6
 	#define IOTORII_IPV6 IOTORII_CONF_IPV6
 #else
-	#define IOTORII_IPV6 1 //To use (1) or not (0) IPv6
+	#define IOTORII_IPV6 0 //To use (1) or not (0) IPv6
 #endif
 
 #ifdef IOTORII_CONF_NODE_TYPE
