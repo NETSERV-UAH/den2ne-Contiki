@@ -947,7 +947,7 @@ uip_update_ttl(void)
 void
 uip_process(uint8_t flag)
 {
-  uint8_t *last_header;
+	uint8_t *last_header;
   uint8_t protocol;
   uint8_t *next_header;
   struct uip_ext_hdr *ext_ptr;
@@ -1226,7 +1226,6 @@ uip_process(uint8_t flag)
    */
 #if UIP_IPV6_MULTICAST
   if(uip_is_addr_mcast_routable(&UIP_IP_BUF->destipaddr)) {
-    printf("Multicast recibido\n\r");
     if(UIP_MCAST6.in() == UIP_MCAST6_ACCEPT) {
       /* Deliver up the stack */
       goto process;
@@ -1236,7 +1235,6 @@ uip_process(uint8_t flag)
     }
   }
 #endif /* UIP_IPV6_MULTICAST */
-
   /* TBD Some Parameter problem messages */
   if(!uip_ds6_is_my_addr(&UIP_IP_BUF->destipaddr) &&
      !uip_ds6_is_my_maddr(&UIP_IP_BUF->destipaddr)) {

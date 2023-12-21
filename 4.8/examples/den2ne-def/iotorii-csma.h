@@ -21,8 +21,12 @@
 #ifdef IOTORII_CONF_IPV6
 	#define IOTORII_IPV6 IOTORII_CONF_IPV6
 #else
-	#define IOTORII_IPV6 0 //To use (1) or not (0) IPv6
+	#define IOTORII_IPV6 1 //To use (1) or not (0) IPv6
 #endif
+
+//#if IOTORII_IPV6 == 1 
+	//#define UIP_MCAST6_CONF_ENGINE UIP_MCAST6_ENGINE_MPL
+//#endif
 
 #ifdef IOTORII_CONF_NODE_TYPE
 	#define IOTORII_NODE_TYPE IOTORII_CONF_NODE_TYPE

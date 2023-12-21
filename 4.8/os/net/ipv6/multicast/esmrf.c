@@ -179,6 +179,8 @@ icmp_output()
 static void
 icmp_input()
 {
+  	printf("Byte: %x.%x\n", UIP_IP_BUF->destipaddr.u16[0], UIP_IP_BUF->destipaddr.u16[7]);
+
 #if UIP_CONF_IPV6_CHECKS
   if(UIP_ICMP_BUF->icode != ESMRF_ICMP_CODE) {
     PRINTF("ESMRF: ICMPv6 In, bad ICMP code\n");

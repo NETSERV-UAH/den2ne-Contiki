@@ -9,7 +9,7 @@
 #include "sys/ctimer.h"
 
 #define uip_create_linklocal_iotorii_nodes_mcast(addr) \
-    uip_ip6addr((addr), 0xff1e, 0, 0, 0, 0, 0, 0x89, 0xabcd)
-    // uip_ip6addr((addr), 0xff02, 0, 0, 0, 0, 0, 0, 0x1a)
+    uip_ip6addr((addr), 0xff03, 0, 0, 0, 0, 0, 0, 0xfc)
+    //uip_ip6addr((addr), 0xff1e, 0, 0, 0, 0, 0, 0x89, 0xabcd)
 
 #endif /* RPL_H */

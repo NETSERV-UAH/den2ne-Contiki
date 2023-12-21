@@ -1,9 +1,6 @@
 CONTIKI_PROJECT = root intermediate sink
 all: $(CONTIKI_PROJECT)
 
-PLATFORMS_ONLY += nrf
-BOARDS_ONLY = nrf5340/dk/application
-
 # does not fit on sky and z1 motes
 PLATFORMS_EXCLUDE = sky z1
 

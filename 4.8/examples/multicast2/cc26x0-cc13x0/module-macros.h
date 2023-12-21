@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, Thingsquare, http://www.thingsquare.com/.
+ * Copyright (c) 2018, University of Bristol - http://www.bristol.ac.uk/
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -14,10 +14,10 @@
  *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
  * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
@@ -26,50 +26,9 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-
-#ifndef RPL_DAG_ROOT_H_
-#define RPL_DAG_ROOT_H_
-
-/**
-* \addtogroup rpl-lite
-* @{
-*
-* \file
-*         DAG root utility functions for RPL.
-*/
-
-/********** Public functions **********/
-
-/**
- * Set a prefix in case the node is later set as dag root.
- *
- * \param prefix The prefix. If NULL, uip_ds6_default_prefix() is used instead
- * \param iid The IID. If NULL, it will be built from uip_ds6_set_addr_iid.
-*/
-void rpl_dag_root_set_prefix(uip_ipaddr_t *prefix, uip_ipaddr_t *iid);
-
-/**
- * Set the node as root and start a DAG
- *
- * \return 0 in case of success, -1 otherwise
-*/
-int rpl_dag_root_start(void);
-
-/**
- * Tells whether we are DAG root or not
- *
- * \return 1 if we are dag root, 0 otherwise
-*/
-int rpl_dag_root_is_root(void);
-/**
- * Prints a summary of all routing links
- *
- * \param str A descriptive text on the caller
-*/
-void rpl_dag_root_print_links(const char *str);
-
- /** @} */
-
-#endif /* RPL_DAG_ROOT_H_ */
+/*---------------------------------------------------------------------------*/
+/* Code/RAM footprint savings so that things will fit on sensortags */
+#define NETSTACK_MAX_ROUTE_ENTRIES    4
+#define NBR_TABLE_CONF_MAX_NEIGHBORS  4
+#define QUEUEBUF_CONF_NUM             4

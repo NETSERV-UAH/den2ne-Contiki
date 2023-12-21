@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Inria.
+ * Copyright (c) 2010, Loughborough University - Computer Science
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,35 @@
  */
 
 /**
- * \addtogroup rpl-lite
- * @{
- *
  * \file
- *         Header file for rpl-ext-header
+ *         This node is part of the RPL multicast example. It basically
+ *         represents a node that does not join the multicast group
+ *         but still knows how to forward multicast packets
+ *         The example will work with or without any number of these nodes
  *
- * \author Simon Duquennoy <simon.duquennoy@inria.fr>
+ *         Also, performs some sanity checks for the contiki configuration
+ *         and generates an error if the conf is bad
+ *
+ * \author
+ *         George Oikonomou - <oikonomou@users.sourceforge.net>
  */
 
- #ifndef RPL_EXT_HEADER_H_
- #define RPL_EXT_HEADER_H_
+#include "contiki.h"
+#include "contiki-net.h"
+#include "net/ipv6/multicast/uip-mcast6.h"
 
-/********** Public functions **********/
+#if !NETSTACK_CONF_WITH_IPV6 || !UIP_CONF_ROUTER || !UIP_IPV6_MULTICAST || !UIP_CONF_IPV6_RPL
+#error "This example can not work with the current contiki configuration"
+#error "Check the values of: NETSTACK_CONF_WITH_IPV6, UIP_CONF_ROUTER, UIP_CONF_IPV6_RPL"
+#endif
+/*---------------------------------------------------------------------------*/
+PROCESS(mcast_intermediate_process, "Intermediate Process");
+AUTOSTART_PROCESSES(&mcast_intermediate_process);
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(mcast_intermediate_process, ev, data)
+{
+  PROCESS_BEGIN();
 
-/**
-* Look for next hop from SRH of current uIP packet.
-*
-* \param ipaddr A pointer to the address where to store the next hop.
-* \return 1 if a next hop was found, 0 otherwise
-*/
-int rpl_ext_header_srh_get_next_hop(uip_ipaddr_t *ipaddr);
-
-/**
-* Process and update SRH in-place,
-* i.e. internal address swapping as per RFC6554
-* \return 1 if SRH found, 0 otherwise
-*/
-int rpl_ext_header_srh_update(void);
-
-/**
-* Process and update the RPL hop-by-hop extension headers of
-* the current uIP packet.
-*
-* \param ext_buf A pointer to the ext header buffer
-* \param opt_offset The offset within the extension header where
-* the option starts
-* \return 1 in case the packet is valid and to be processed further,
-* 0 in case the packet must be dropped.
-*/
-int rpl_ext_header_hbh_update(uint8_t *ext_buf, int opt_offset);
-
-/**
- * Adds/updates all RPL extension headers to current uIP packet.
- *
- * \return 1 in case of success, 0 otherwise
-*/
-int rpl_ext_header_update(void);
-
-/**
- * Removes all RPL extension headers.
- *
- * \return true in case of success, false otherwise
-*/
-bool rpl_ext_header_remove(void);
-
- /** @} */
-
-#endif /* RPL_EXT_HEADER_H_ */
+  PROCESS_END();
+}
+/*---------------------------------------------------------------------------*/
