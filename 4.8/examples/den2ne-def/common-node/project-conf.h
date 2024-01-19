@@ -56,7 +56,7 @@
 #endif
 
 #ifndef IOTORII_CONF_IPV6
-    #define IOTORII_CONF_IPV6 1 //POR USA IPv6
+    #define IOTORII_CONF_IPV6 0 //POR DEFECTO NO USA IPv6
     // #include "net/ipv6/multicast/uip-mcast6-engines.h"
     // #ifndef UIP_MCAST6_CONF_ENGINE
     //     #define UIP_MCAST6_CONF_ENGINE UIP_MCAST6_ENGINE_MPL

@@ -42,7 +42,7 @@
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
 	#define IOTORII_HELLO_IDLE_TIME IOTORII_CONF_HELLO_IDLE_TIME
 #else
-	#define IOTORII_HELLO_IDLE_TIME 3 //Default Delay is 2 s
+	#define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 2 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
@@ -150,6 +150,11 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 	uint8_t sent_load = 0;
 
 	short extra_load = 0; //INDICA CUANTA CARGA SOBRA SI UN NODO TIENE UNA CANTIDAD MAYOR A 100 
+
+	int log = 0xF5000;
+	int nvmc = 0x4001E000;
+	int protection = 0x10001208;
+	int mem_counter = 0;
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -553,6 +558,18 @@ void check_neighbours_hello (list_t list){
 
 static void iotorii_handle_hello_timer ()
 {
+	int erase = 0x2, write=0x1, read=0x0;
+	int erase_mem = log-0x1000;
+	int check, check2;
+
+	mem_counter = mem_counter + 4;
+	printf("Contador: %d\n\rDir: 0x%x\r\n", mem_counter, &mem_counter);
+	memcpy(nvmc+0x504, &erase, 4);
+	memcpy(nvmc+0x508, &erase_mem, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+	memcpy(nvmc+0x504, &write, 4);
+	memcpy(log-0x4, &mem_counter, 4);
+	memcpy(nvmc+0x504, &read, 4);
+
 	#if IOTORII_IPV6 == 1 //IPv6
 		udp_conn.udp_conn->lport=UIP_HTONS(UDP_PORT_SEND);
 		simple_udp_sendto(&udp_conn, "h", strlen("h"), &dest_ipaddr);
@@ -589,6 +606,20 @@ static void iotorii_handle_hello_timer ()
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 	
 	check_neighbours_hello(neighbour_table_entry_list);
+	char *data = (char*) malloc (sizeof(char) * 4);
+	sprintf(data, "%d%d", 0xFFF1, number_of_hello_messages);
+
+	memcpy(&check, nvmc+0x400, 4);
+	memcpy(&check2, nvmc+0x408, 4);
+	if(check && check2){
+		memcpy(nvmc+0x504, &write, 4);
+		memcpy(log+4*(number_of_hello_messages-1), &data, 4);
+		memcpy(nvmc+0x504, &read, 4);
+	}
+
+	// int result_prot;
+	// memcpy(&result_prot, protection, 4);
+	// printf("Protection: 0x%x\n\r", result_prot);
 	
 	sent_load = 0;
 }
@@ -1342,6 +1373,12 @@ static void init (void)
 	csma_output_init(); //INICIALIZA VECINO
 	on();
 
+	int write=0x1, read=0x0;
+	int check, check2;
+	// int dis_prot = 0xFFFFFF00;
+	// memcpy(nvmc+0x504, &write, 4);
+	// memcpy(protection, &dis_prot, 4);
+	// memcpy(nvmc+0x504, &read, 4);
 
 	#if IOTORII_IPV6 == 1 //IPv6
 		//uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x709);
@@ -1381,6 +1418,27 @@ static void init (void)
 		number_of_neighbours = 0;
 		number_of_neighbours_flag = 0;
 		hlmac_table_init(); //SE CREA LA TABLA DE VECINOS
+		
+		// int erase=0x1, erase_en=0x10, eras_dis=0x0;
+		// memcpy(nvmc+0x504, &erase_en, 4);
+		// memcpy(nvmc+0x50C, &erase, 4);
+		// memcpy(nvmc+0x504, &erase_dis, 4);
+
+		char *data = (char*) malloc (sizeof(char) * 4);
+		int mem_used;
+
+		memcpy(&mem_used, log-0x4, 4);
+		printf("Log: %d\n\r", mem_used);
+
+
+		// memcpy(&check, nvmc+0x400, 4);
+		// memcpy(&check2, nvmc+0x408, 4);
+		// printf("Ready: %d\tNext: %d\n\r", check, check2);
+		// if(check && check2){
+		// 	memcpy(nvmc+0x504, &write, 4);
+		// 	memcpy(log+0x100, &data, 8);
+		// 	memcpy(nvmc+0x504, &read, 4);
+		// }
 	#endif
 }
 
