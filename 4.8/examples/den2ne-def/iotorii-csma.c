@@ -150,12 +150,17 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 	uint8_t sent_load = 0;
 
 	short extra_load = 0; //INDICA CUANTA CARGA SOBRA SI UN NODO TIENE UNA CANTIDAD MAYOR A 100 
+#endif
 
+
+// #if LOG_NRF52840 == 1 //LOG EN NRF52840-DK
+	uint8_t erase = 0x2, write=0x1, read=0x0;
 	int log = 0xF5000;
 	int nvmc = 0x4001E000;
-	int protection = 0x10001208;
 	int mem_counter = 0;
-#endif
+	int page_mem_counter = 0xF4000;
+	int ready, ready_next;
+// #endif
 
 /*---------------------------------------------------------------------------*/
 
@@ -254,6 +259,81 @@ static int max_payload (void)
 			iotorii_handle_incoming_sethlmac_or_load(sender_addr, data, datalen);
 	}
 #endif
+
+/*---------------------------------------------------------------------------*/
+
+void show_log(){
+	int mem_used, code;
+	memcpy(&mem_used, page_mem_counter+0xFFC, sizeof(int));
+	printf("Log: %d\n\r", mem_used);
+	int aux_log;
+	linkaddr_t addr_log;
+	for(int counter = 0; counter < mem_used; counter=counter+sizeof(code)){
+		memcpy(&code, log+counter, 4);
+		switch (code)
+		{
+		case 0xFFFF1111: //HELLO ENVIADO
+			memcpy(&aux_log, log+counter+4, sizeof(aux_log)); //AUX_LOG => NUMERO DE HELLO ENVIADO
+			counter=counter+sizeof(aux_log);
+			printf("//LOG// HELLO numero %d enviado.\n\r", aux_log);
+			break;
+		case 0xFFFF2222: //HELLO RECIBIDO
+			memcpy(&addr_log, log+counter+4, sizeof(addr_log));
+			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
+			printf("//LOG// HELLO recibido de ");
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", addr_log.u8[i]);
+			}
+			printf(".\n\r");
+			break;
+		case 0xFFFF5555:  //LOAD ENVIADO
+			memcpy(&aux_log, log+counter+4, sizeof(aux_log));
+			counter=counter+sizeof(aux_log);
+			printf("//LOG// LOAD con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
+			break;
+		case 0xFFFF6666: //LOAD RECIBIDO
+			memcpy(&aux_log, log+counter+4, sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
+			counter=counter+sizeof(aux_log);
+			memcpy(&addr_log, log+counter+4, sizeof(addr_log));
+			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
+			printf("//LOG// LOAD con valor %d recibido de ", aux_log);
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", addr_log.u8[i]);
+			}
+			printf(".\n\r");
+			break;
+		case 0xFFFF7777:  //SHARE ENVIADO
+			memcpy(&aux_log, log+counter+4, sizeof(aux_log));
+			counter=counter+sizeof(aux_log);
+			printf("//LOG// SHARE con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
+			break;
+		case 0xFFFF8888: //SHARE RECIBIDO
+			memcpy(&aux_log, log+counter+4, sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
+			counter=counter+sizeof(aux_log);
+			memcpy(&addr_log, log+counter+4, sizeof(addr_log));
+			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
+			printf("//LOG// SHARE con valor %d recibido de ", aux_log);
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", addr_log.u8[i]);
+			}
+			printf(".\n\r");
+			break;
+		
+		default:
+			break;
+		}
+		
+	}
+}
 
 /*---------------------------------------------------------------------------*/
 
@@ -394,6 +474,27 @@ void iotorii_handle_load_timer ()
 	
 	if (list_head(node_list)) //EXISTE 
 	{
+		int code = 0xFFFF5555;
+		memcpy(&ready, nvmc+0x400, 4);
+		memcpy(&ready_next, nvmc+0x408, 4);
+		if(ready && ready_next){
+			memcpy(nvmc+0x504, &write, 4);
+			memcpy(log+mem_counter, &code, sizeof(code));
+			memcpy(log+mem_counter+4, &(node->load), sizeof(node->load));
+			memcpy(nvmc+0x504, &read, 4);
+		}
+
+		if(sizeof(node->load) % 4 != 0){
+			mem_counter = mem_counter + sizeof(code) + sizeof(node->load) + (4-(sizeof(node->load) % 4));
+		} else {
+			mem_counter = mem_counter + sizeof(code) + sizeof(node->load);
+		}
+		memcpy(nvmc+0x504, &erase, 4);
+		memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+		memcpy(nvmc+0x504, &write, 4);
+		memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+		memcpy(nvmc+0x504, &read, 4);
+
 		#if IOTORII_IPV6 == 1 //IPv6
 			udp_conn.udp_conn->lport=UIP_HTONS(UDP_PORT_SEND);
 			simple_udp_sendto(&udp_conn, &(node->load), sizeof(node->load), &dest_ipaddr);
@@ -473,6 +574,23 @@ void iotorii_handle_share_upstream_timer ()
 	
 	send_packet(NULL, NULL);
 #endif
+
+		int code = 0xFFFF7777, int_extra_load = (int) extra_load;
+		memcpy(&ready, nvmc+0x400, 4);
+		memcpy(&ready_next, nvmc+0x408, 4);
+		if(ready && ready_next){
+			memcpy(nvmc+0x504, &write, 4);
+			memcpy(log+mem_counter, &code, sizeof(code));
+			memcpy(log+mem_counter+4, &int_extra_load, sizeof(int_extra_load));
+			memcpy(nvmc+0x504, &read, 4);
+		}
+		
+		mem_counter = mem_counter + sizeof(code) + sizeof(int_extra_load);
+		memcpy(nvmc+0x504, &erase, 4);
+		memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+		memcpy(nvmc+0x504, &write, 4);
+		memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+		memcpy(nvmc+0x504, &read, 4);
 }
 
 
@@ -558,16 +676,26 @@ void check_neighbours_hello (list_t list){
 
 static void iotorii_handle_hello_timer ()
 {
-	int erase = 0x2, write=0x1, read=0x0;
-	int erase_mem = log-0x1000;
-	int check, check2;
+	int number_of_hello_messages_int = number_of_hello_messages, code = 0xFFFF1111;
 
-	mem_counter = mem_counter + 4;
-	printf("Contador: %d\n\rDir: 0x%x\r\n", mem_counter, &mem_counter);
+	memcpy(&ready, nvmc+0x400, 4);
+	memcpy(&ready_next, nvmc+0x408, 4);
+	if(ready && ready_next){
+		memcpy(nvmc+0x504, &write, 4);
+		memcpy(log+mem_counter, &code, sizeof(code));
+		memcpy(log+mem_counter+4, &number_of_hello_messages_int, sizeof(number_of_hello_messages_int));
+		memcpy(nvmc+0x504, &read, 4);
+	}
+
+	if(sizeof(number_of_hello_messages_int) % 4 != 0){
+		mem_counter = mem_counter + sizeof(code) + sizeof(number_of_hello_messages_int) + (4-(sizeof(number_of_hello_messages_int) % 4));
+	} else {
+		mem_counter = mem_counter + sizeof(code) + sizeof(number_of_hello_messages_int);
+	}
 	memcpy(nvmc+0x504, &erase, 4);
-	memcpy(nvmc+0x508, &erase_mem, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+	memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
 	memcpy(nvmc+0x504, &write, 4);
-	memcpy(log-0x4, &mem_counter, 4);
+	memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
 	memcpy(nvmc+0x504, &read, 4);
 
 	#if IOTORII_IPV6 == 1 //IPv6
@@ -606,16 +734,14 @@ static void iotorii_handle_hello_timer ()
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 	
 	check_neighbours_hello(neighbour_table_entry_list);
-	char *data = (char*) malloc (sizeof(char) * 4);
-	sprintf(data, "%d%d", 0xFFF1, number_of_hello_messages);
 
-	memcpy(&check, nvmc+0x400, 4);
-	memcpy(&check2, nvmc+0x408, 4);
-	if(check && check2){
-		memcpy(nvmc+0x504, &write, 4);
-		memcpy(log+4*(number_of_hello_messages-1), &data, 4);
-		memcpy(nvmc+0x504, &read, 4);
-	}
+	// memcpy(&ready, nvmc+0x400, 4);
+	// memcpy(&ready_next, nvmc+0x408, 4);
+	// if(ready && ready_next){
+	// 	memcpy(nvmc+0x504, &write, 4);
+	// 	memcpy(log+4*(number_of_hello_messages-1), data, 4);
+	// 	memcpy(nvmc+0x504, &read, 4);
+	// }
 
 	// int result_prot;
 	// memcpy(&result_prot, protection, 4);
@@ -933,6 +1059,26 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 {
 	const linkaddr_t *sender_addr = packetbuf_addr(PACKETBUF_ADDR_SENDER); //SE LEE EL BUFFER
 
+	int code = 0xFFFF2222;
+	memcpy(&ready, nvmc+0x400, 4);
+	memcpy(&ready_next, nvmc+0x408, 4);
+	if(ready && ready_next){
+		memcpy(nvmc+0x504, &write, 4);
+		memcpy(log+mem_counter, &code, sizeof(code));
+		memcpy(log+mem_counter+4, sender_addr, sizeof(*sender_addr));
+		memcpy(nvmc+0x504, &read, 4);
+	}
+
+	mem_counter = mem_counter + sizeof(code) + sizeof(*sender_addr);
+	if(sizeof(*sender_addr) % 4 != 0)
+		mem_counter = mem_counter + (4-(sizeof(*sender_addr) % 4));
+	mem_counter = mem_counter + sizeof(code) + sizeof(*sender_addr);
+	memcpy(nvmc+0x504, &erase, 4);
+	memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+	memcpy(nvmc+0x504, &write, 4);
+	memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+	memcpy(nvmc+0x504, &read, 4);
+
 	LOG_DBG("A Hello message received from ");
 	LOG_DBG_LLADDR(sender_addr);
 	LOG_DBG("\r\n");
@@ -1186,6 +1332,26 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			
 			char* str_sender = (char*) malloc (sizeof(char) * (LINKADDR_SIZE * (2 + 1) + 1));
 			str_sender = link_addr_to_str (sender_link_address, 1);	//LENGTH = 1 PARA MOSTRAR SOLO EL ID
+
+			int code = 0xFFFF6666;
+			memcpy(&ready, nvmc+0x400, 4);
+			memcpy(&ready_next, nvmc+0x408, 4);
+			if(ready && ready_next){
+				memcpy(nvmc+0x504, &write, 4);
+				memcpy(log+mem_counter, &code, sizeof(code));
+				memcpy(log+mem_counter+4, p_load, sizeof(*p_load));
+				memcpy(log+mem_counter+4+sizeof(*p_load), &sender_link_address, sizeof(sender_link_address));
+				memcpy(nvmc+0x504, &read, 4);
+			}
+
+			mem_counter = mem_counter + sizeof(code) + sizeof(*p_load) + sizeof(sender_link_address);
+			if(sizeof(sender_link_address) % 4 != 0)
+				mem_counter = mem_counter + (4-(sizeof(sender_link_address) % 4));
+			memcpy(nvmc+0x504, &erase, 4);
+			memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+			memcpy(nvmc+0x504, &write, 4);
+			memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+			memcpy(nvmc+0x504, &read, 4);
 			
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
 			{
@@ -1245,6 +1411,25 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						nb->in_out = *p_extra;
 				}
 			}
+
+			int code = 0xFFFF8888, p_extra_int = (int) *p_extra;
+			memcpy(&ready, nvmc+0x400, 4);
+			memcpy(&ready_next, nvmc+0x408, 4);
+			if(ready && ready_next){
+				memcpy(nvmc+0x504, &write, 4);
+				memcpy(log+mem_counter, &code, sizeof(code));
+				memcpy(log+mem_counter+4, &p_extra_int, sizeof(p_extra_int));
+				memcpy(log+mem_counter+4+sizeof(p_extra_int), &sender_link_address, sizeof(sender_link_address));
+				memcpy(nvmc+0x504, &read, 4);
+			}
+			mem_counter = mem_counter + sizeof(code) + sizeof(p_extra_int) + sizeof(sender_link_address);
+			if(sizeof(sender_link_address) % 4 != 0)
+				mem_counter = mem_counter + (4-(sizeof(sender_link_address) % 4));
+			memcpy(nvmc+0x504, &erase, 4);
+			memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+			memcpy(nvmc+0x504, &write, 4);
+			memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+			memcpy(nvmc+0x504, &read, 4);
 			
 			free(p_extra);
 			p_extra = NULL;	
@@ -1373,13 +1558,6 @@ static void init (void)
 	csma_output_init(); //INICIALIZA VECINO
 	on();
 
-	int write=0x1, read=0x0;
-	int check, check2;
-	// int dis_prot = 0xFFFFFF00;
-	// memcpy(nvmc+0x504, &write, 4);
-	// memcpy(protection, &dis_prot, 4);
-	// memcpy(nvmc+0x504, &read, 4);
-
 	#if IOTORII_IPV6 == 1 //IPv6
 		//uip_ip6addr(&dest_ipaddr, 0xFD03,0,0,0,0x302,0x304,0x506,0x709);
 		//uip_ip6addr(&dest_ipaddr, 0xff1e, 0, 0, 0, 0, 0, 0x89, 0xabcd);
@@ -1424,11 +1602,11 @@ static void init (void)
 		// memcpy(nvmc+0x50C, &erase, 4);
 		// memcpy(nvmc+0x504, &erase_dis, 4);
 
-		char *data = (char*) malloc (sizeof(char) * 4);
-		int mem_used;
-
-		memcpy(&mem_used, log-0x4, 4);
-		printf("Log: %d\n\r", mem_used);
+		// int write=0x1, read=0x0;
+		// int dis_prot = 0xFFFFFF00;
+		// memcpy(nvmc+0x504, &write, 4);
+		// memcpy(protection, &dis_prot, 4);
+		// memcpy(nvmc+0x504, &read, 4);
 
 
 		// memcpy(&check, nvmc+0x400, 4);
@@ -1439,6 +1617,7 @@ static void init (void)
 		// 	memcpy(log+0x100, &data, 8);
 		// 	memcpy(nvmc+0x504, &read, 4);
 		// }
+		show_log();
 	#endif
 }
 

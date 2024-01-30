@@ -63,6 +63,10 @@
     // #endif
 #endif
 
+#ifndef LOG_NRF52840
+    #define LOG_NRF52840 1 //POR DEFECTO USA LOG PARA NRF52840-DK
+#endif
+
 /*---------------------------------------------------------------------------*/
 /* Configure the routing_driver for netstack.h */
 //#define NETSTACK_CONF_ROUTING      nullrouting_driver
