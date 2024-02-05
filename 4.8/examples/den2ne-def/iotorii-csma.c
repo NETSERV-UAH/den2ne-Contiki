@@ -36,7 +36,7 @@
 #ifdef IOTORII_CONF_HELLO_START_TIME
 	#define IOTORII_HELLO_START_TIME IOTORII_CONF_HELLO_START_TIME
 #else
-	#define IOTORII_HELLO_START_TIME 3 //Default Delay is 2 s
+	#define IOTORII_HELLO_START_TIME 10 //Default Delay is 2 s
 #endif
 
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
@@ -266,19 +266,19 @@ void show_log(){
 	int mem_used, code;
 	memcpy(&mem_used, page_mem_counter+0xFFC, sizeof(int));
 	printf("Log: %d\n\r", mem_used);
-	int aux_log;
+	int aux_log, len_log;
 	linkaddr_t addr_log;
 	for(int counter = 0; counter < mem_used; counter=counter+sizeof(code)){
 		memcpy(&code, log+counter, 4);
 		switch (code)
 		{
 		case 0xFFFF1111: //HELLO ENVIADO
-			memcpy(&aux_log, log+counter+4, sizeof(aux_log)); //AUX_LOG => NUMERO DE HELLO ENVIADO
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => NUMERO DE HELLO ENVIADO
 			counter=counter+sizeof(aux_log);
 			printf("//LOG// HELLO numero %d enviado.\n\r", aux_log);
 			break;
 		case 0xFFFF2222: //HELLO RECIBIDO
-			memcpy(&addr_log, log+counter+4, sizeof(addr_log));
+			memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
 			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
 			printf("//LOG// HELLO recibido de ");
 			for(int i = 0; i < LINKADDR_SIZE; i++) {
@@ -289,15 +289,63 @@ void show_log(){
 			}
 			printf(".\n\r");
 			break;
+		case 0xFFFF3333: //HLMAC ENVIADA
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => TIMESTAMP
+			counter=counter+sizeof(aux_log);
+			printf("//LOG// HLMAC enviada con timestamp %d y ", aux_log);
+			memcpy(&len_log, log+counter+sizeof(code), sizeof(len_log)); //LEN_LOG => LONGITUD DIRECCIÓN PROPIA
+			counter=counter+sizeof(len_log);
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => INICIO DE DIRECCIÓN PROPIA
+			counter=counter+sizeof(aux_log);
+			printf("direccion %2.2X", aux_log);
+			for(int k=1; k<len_log; k++){
+				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => CADA BYTE DE DIRECCIÓN PROPIA
+				counter=counter+sizeof(aux_log);
+				printf(".%2.2X", aux_log);
+			}
+			printf(" asigna ");
+			memcpy(&len_log, log+counter+sizeof(code), sizeof(len_log)); //LEN_LOG => NÚMERO DE HLMACS ASIGNADAS
+			counter=counter+sizeof(len_log);
+			for(int k=0; k<len_log-1; k++){
+				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => ID DE CADA HLMAC ASIGNADA
+				counter=counter+sizeof(aux_log);
+				printf("%2.2X a ", aux_log);
+				memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
+				counter=counter+sizeof(addr_log);
+				for(int i = 0; i < LINKADDR_SIZE; i++) {
+					if(i > 0 && i % 2 == 0) {
+						printf(".");
+					}
+					printf("%02x", addr_log.u8[i]);
+				}
+			}
+			printf(".\n\r");
+			break;
+		case 0xFFFF4444: //HLMAC RECIBIDA
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => TIMESTAMP
+			counter=counter+sizeof(aux_log);
+			printf("//LOG// HLMAC recibida con timestamp %d y asigna la ", aux_log);
+			memcpy(&len_log, log+counter+sizeof(code), sizeof(len_log)); //LEN_LOG => LONGITUD DIRECCIÓN PROPIA
+			counter=counter+sizeof(len_log);
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => INICIO DE DIRECCIÓN PROPIA
+			counter=counter+sizeof(aux_log);
+			printf("direccion %2.2X", aux_log);
+			for(int k=1; k<len_log; k++){
+				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => CADA BYTE DE DIRECCIÓN PROPIA
+				counter=counter+sizeof(aux_log);
+				printf(".%2.2X", aux_log);
+			}
+			printf(".\n\r");
+			break;
 		case 0xFFFF5555:  //LOAD ENVIADO
-			memcpy(&aux_log, log+counter+4, sizeof(aux_log));
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log));
 			counter=counter+sizeof(aux_log);
 			printf("//LOG// LOAD con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
 			break;
 		case 0xFFFF6666: //LOAD RECIBIDO
-			memcpy(&aux_log, log+counter+4, sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
 			counter=counter+sizeof(aux_log);
-			memcpy(&addr_log, log+counter+4, sizeof(addr_log));
+			memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
 			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
 			printf("//LOG// LOAD con valor %d recibido de ", aux_log);
 			for(int i = 0; i < LINKADDR_SIZE; i++) {
@@ -309,14 +357,14 @@ void show_log(){
 			printf(".\n\r");
 			break;
 		case 0xFFFF7777:  //SHARE ENVIADO
-			memcpy(&aux_log, log+counter+4, sizeof(aux_log));
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log));
 			counter=counter+sizeof(aux_log);
 			printf("//LOG// SHARE con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
 			break;
 		case 0xFFFF8888: //SHARE RECIBIDO
-			memcpy(&aux_log, log+counter+4, sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
 			counter=counter+sizeof(aux_log);
-			memcpy(&addr_log, log+counter+4, sizeof(addr_log));
+			memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
 			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
 			printf("//LOG// SHARE con valor %d recibido de ", aux_log);
 			for(int i = 0; i < LINKADDR_SIZE; i++) {
@@ -331,8 +379,10 @@ void show_log(){
 		default:
 			break;
 		}
-		
 	}
+	memcpy(nvmc+0x504, &erase, 4);
+	memcpy(nvmc+0x508, &log, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+	memcpy(nvmc+0x504, &read, 4);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -584,7 +634,7 @@ void iotorii_handle_share_upstream_timer ()
 			memcpy(log+mem_counter+4, &int_extra_load, sizeof(int_extra_load));
 			memcpy(nvmc+0x504, &read, 4);
 		}
-		
+
 		mem_counter = mem_counter + sizeof(code) + sizeof(int_extra_load);
 		memcpy(nvmc+0x504, &erase, 4);
 		memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
@@ -843,7 +893,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					LOG_DBG("Sender node is in neighbour list, number_of_neighbours: %u, number_of_neighbours_new: %u.\r\n", number_of_neighbours, number_of_neighbours_new);
 				#endif
 			}
-		} 
+		}
 
 		if (number_of_neighbours_new > 0)
 		{
@@ -940,7 +990,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 						memcpy(packetbuf_ptr, &(random_list[i-1]->addr), 16); //COPIA DIRECCIÓN MAC DE VECINO
 						
 						packetbuf_ptr += 16;
-						datalen_counter += 16;
+						datalen_counter += 16;				
 
 						i++;
 					} while (mac_max_payload >= (datalen_counter + 16 + 1) && i <= number_of_neighbours_new);
@@ -961,12 +1011,45 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 						i++;
 					} while (mac_max_payload >= (datalen_counter + LINKADDR_SIZE + 1) && i <= number_of_neighbours_new);
 				#endif
+				
+				int code = 0xFFFF3333, int_address_len = (int) addr.len, int_address, c=1, int_number_id, int_i = (int) i;
+				memcpy(&ready, nvmc+0x400, 4);
+				memcpy(&ready_next, nvmc+0x408, 4);
+				if(ready && ready_next){
+					memcpy(nvmc+0x504, &write, 4);
+					memcpy(log+mem_counter, &code, sizeof(code));
+					memcpy(log+mem_counter+sizeof(code), &timestamp, sizeof(timestamp));
+					memcpy(log+mem_counter+sizeof(code)+sizeof(timestamp), &int_address_len, sizeof(int_address_len));
+					mem_counter = mem_counter + sizeof(code) + sizeof(timestamp) + sizeof(int_address_len);
+					for(int k = 0; k < addr.len; k++){
+						int_address = (int) addr.address[k];
+						memcpy(log+mem_counter+sizeof(int_address)*k, &int_address, sizeof(int_address));
+					}
+					mem_counter = mem_counter + addr.len*sizeof(int_address);
+					memcpy(log+mem_counter, &int_i, sizeof(int_i));
+					mem_counter = mem_counter + sizeof(int_i);
+					do
+					{
+						int_number_id = (int) random_list[c-1]->number_id;
+						memcpy(log+mem_counter, &int_number_id, sizeof(int_number_id));
+						memcpy(log+mem_counter+sizeof(int_number_id), &(random_list[c-1]->addr), sizeof(random_list[c-1]->addr));
+						mem_counter = mem_counter + sizeof(int_number_id) + sizeof(random_list[c-1]->addr);
+						c++;
+					} while (c < i);
+					memcpy(nvmc+0x504, &read, 4);
+				}
+				
+				memcpy(nvmc+0x504, &erase, 4);
+				memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+				memcpy(nvmc+0x504, &write, 4);
+				memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+				memcpy(nvmc+0x504, &read, 4);
+
 				//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
 				payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
 				payload_entry->next = NULL;
 				payload_entry->payload = packetbuf_ptr_head;
 				payload_entry->data_len = datalen_counter;
-
 
 			#if IOTORII_IPV6 == 1 //IPv6
 				//ENVÍO DE HLMAC UNICAST, CAMBIAR A MCAST
@@ -1441,6 +1524,29 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 		char *new_hlmac_addr_str = hlmac_addr_to_str(*received_hlmac_addr);
 		printf("//INFO INCOMING HLMAC// HLMAC recibida: %s\r\n", new_hlmac_addr_str);
 		free(new_hlmac_addr_str);
+						
+		int code = 0xFFFF4444, int_hlmac_len = (int) received_hlmac_addr->len, int_address;
+		memcpy(&ready, nvmc+0x400, 4);
+		memcpy(&ready_next, nvmc+0x408, 4);
+		if(ready && ready_next){
+			memcpy(nvmc+0x504, &write, 4);
+			memcpy(log+mem_counter, &code, sizeof(code));
+			memcpy(log+mem_counter+sizeof(code), &timestamp, sizeof(timestamp));
+			memcpy(log+mem_counter+sizeof(code)+sizeof(timestamp), &int_hlmac_len, sizeof(int_hlmac_len));
+			mem_counter = mem_counter + sizeof(code) + sizeof(timestamp) + sizeof(int_hlmac_len);
+			for(int k = 0; k < int_hlmac_len; k++){
+				int_address = (int) received_hlmac_addr->address[k];
+				memcpy(log+mem_counter+sizeof(int_address)*k, &int_address, sizeof(int_address));
+			}
+			mem_counter = mem_counter + received_hlmac_addr->len*sizeof(int_address);
+			memcpy(nvmc+0x504, &read, 4);
+		}
+
+		memcpy(nvmc+0x504, &erase, 4);
+		memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+		memcpy(nvmc+0x504, &write, 4);
+		memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+		memcpy(nvmc+0x504, &read, 4);
 
 		if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA AL HIJO
 		{
