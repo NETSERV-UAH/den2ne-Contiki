@@ -263,123 +263,237 @@ static int max_payload (void)
 /*---------------------------------------------------------------------------*/
 
 void show_log(){
+	printf("\t{\n\r" \
+		"\t\t\"MAC\"      :\t\"");
+	for(int i = 0; i < LINKADDR_SIZE; i++) {
+		if(i > 0 && i % 2 == 0) {
+			printf(".");
+		}
+		printf("%02x", linkaddr_node_addr.u8[i]);
+	}
+	printf("\",");
+	#if IOTORII_NODE_TYPE == 1 //ROOT
+		printf("\n\r\t\t\"Type\"     :\t\"Root\",");
+	#elif IOTORII_NODE_TYPE == 2 //COMMON
+		printf("\n\r\t\t\"Type\"     :\t\"Common\",");
+	#endif
+	printf("\n\r\t\t\"Message\"  :\t[");
+
 	int mem_used, code;
 	memcpy(&mem_used, page_mem_counter+0xFFC, sizeof(int));
-	printf("Log: %d\n\r", mem_used);
+	// printf("Log: %d\n\r", mem_used);
 	int aux_log, len_log;
 	linkaddr_t addr_log;
 	for(int counter = 0; counter < mem_used; counter=counter+sizeof(code)){
+		//printf("\n\rCounter: %d", counter);
+		printf("\n\r\t\t{");
 		memcpy(&code, log+counter, 4);
+		printf("\n\r\t\t\t\"Origin\"  :\t\"");
 		switch (code)
 		{
 		case 0xFFFF1111: //HELLO ENVIADO
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", linkaddr_node_addr.u8[i]);
+			}
+			printf("\",");
+			printf("\n\r\t\t\t\"Type\"    :\t\"Hello\"");
 			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => NUMERO DE HELLO ENVIADO
 			counter=counter+sizeof(aux_log);
-			printf("//LOG// HELLO numero %d enviado.\n\r", aux_log);
+			//printf("//LOG// HELLO numero %d enviado.\n\r", aux_log);
 			break;
+
 		case 0xFFFF2222: //HELLO RECIBIDO
 			memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
-			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
-			printf("//LOG// HELLO recibido de ");
+			counter=counter+sizeof(addr_log);
+			//printf("//LOG// HELLO recibido de ");
 			for(int i = 0; i < LINKADDR_SIZE; i++) {
 				if(i > 0 && i % 2 == 0) {
 					printf(".");
 				}
 				printf("%02x", addr_log.u8[i]);
 			}
-			printf(".\n\r");
+			printf("\",");
+			printf("\n\r\t\t\t\"Type\"    :\t\"Hello\"");
+			//printf(".\n\r");
 			break;
+
 		case 0xFFFF3333: //HLMAC ENVIADA
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", linkaddr_node_addr.u8[i]);
+			}
+			printf("\",");
+			printf("\n\r\t\t\t\"Type\"    :\t\"SetHLMAC\",");
+			printf("\n\r\t\t\t\"Content\" :\n\r\t\t\t{");
 			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => TIMESTAMP
 			counter=counter+sizeof(aux_log);
-			printf("//LOG// HLMAC enviada con timestamp %d y ", aux_log);
+			printf("\n\r\t\t\t\t\"Timestamp\"  :\t\"%d\",", aux_log);
+			//printf("//LOG// HLMAC enviada con timestamp %d y ", aux_log);
 			memcpy(&len_log, log+counter+sizeof(code), sizeof(len_log)); //LEN_LOG => LONGITUD DIRECCIÓN PROPIA
 			counter=counter+sizeof(len_log);
 			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => INICIO DE DIRECCIÓN PROPIA
 			counter=counter+sizeof(aux_log);
-			printf("direccion %2.2X", aux_log);
+			//printf("direccion %2.2X", aux_log);
+			printf("\n\r\t\t\t\t\"Prefix\"     :\t\"%2.2X", aux_log);
 			for(int k=1; k<len_log; k++){
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => CADA BYTE DE DIRECCIÓN PROPIA
 				counter=counter+sizeof(aux_log);
 				printf(".%2.2X", aux_log);
 			}
-			printf(" asigna ");
+			printf("\",");
+			printf("\n\r\t\t\t\t\"HLMAC\"     :");
+			//printf(" asigna ");
 			memcpy(&len_log, log+counter+sizeof(code), sizeof(len_log)); //LEN_LOG => NÚMERO DE HLMACS ASIGNADAS
 			counter=counter+sizeof(len_log);
+			printf("\n\r\t\t\t\t\t{");
 			for(int k=0; k<len_log-1; k++){
-				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => ID DE CADA HLMAC ASIGNADA
-				counter=counter+sizeof(aux_log);
-				printf("%2.2X a ", aux_log);
 				memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
 				counter=counter+sizeof(addr_log);
+				printf("\n\r\t\t\t\t\t\t\"");
 				for(int i = 0; i < LINKADDR_SIZE; i++) {
 					if(i > 0 && i % 2 == 0) {
 						printf(".");
 					}
 					printf("%02x", addr_log.u8[i]);
 				}
+				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => ID DE CADA HLMAC ASIGNADA
+				printf("\" :\t\"%2.2X\"", aux_log);
+				counter=counter+sizeof(aux_log);
+				//printf("%2.2X a ", aux_log);
+				if (k+1<len_log-1)
+					printf(",");
 			}
-			printf(".\n\r");
+			printf("\n\r\t\t\t\t\t}");
+			printf("\n\r\t\t\t}");
+			//printf(".\n\r");
 			break;
+
 		case 0xFFFF4444: //HLMAC RECIBIDA
+			memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
+			counter=counter+sizeof(addr_log);
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", addr_log.u8[i]);
+			}
+			printf("\",");
+			printf("\n\r\t\t\t\"Type\"    :\t\"SetHLMAC\",");
+			printf("\n\r\t\t\t\"Content\" :\n\r\t\t\t{");
 			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => TIMESTAMP
 			counter=counter+sizeof(aux_log);
-			printf("//LOG// HLMAC recibida con timestamp %d y asigna la ", aux_log);
+			printf("\n\r\t\t\t\t\"Timestamp\"  :\t\"%d\",", aux_log);
+			//printf("//LOG// HLMAC recibida con timestamp %d y asigna la ", aux_log);
 			memcpy(&len_log, log+counter+sizeof(code), sizeof(len_log)); //LEN_LOG => LONGITUD DIRECCIÓN PROPIA
 			counter=counter+sizeof(len_log);
 			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => INICIO DE DIRECCIÓN PROPIA
 			counter=counter+sizeof(aux_log);
-			printf("direccion %2.2X", aux_log);
-			for(int k=1; k<len_log; k++){
+			printf("\n\r\t\t\t\t\"Prefix\"     :\t\"%2.2X", aux_log);
+			//printf("direccion %2.2X", aux_log);
+			for(int k=1; k<len_log-1; k++){
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => CADA BYTE DE DIRECCIÓN PROPIA
 				counter=counter+sizeof(aux_log);
 				printf(".%2.2X", aux_log);
 			}
-			printf(".\n\r");
+			printf("\",");
+			printf("\n\r\t\t\t\t\"HLMAC\"     :");
+			printf("\n\r\t\t\t\t\t{");
+			//printf(".\n\r");
+			printf("\n\r\t\t\t\t\t\t\"");
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", linkaddr_node_addr.u8[i]);
+			}
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => CADA BYTE DE DIRECCIÓN PROPIA
+			counter=counter+sizeof(aux_log);
+			printf("\" :\t\"%2.2X\"", aux_log);
+			printf("\n\r\t\t\t\t\t}");
+			printf("\n\r\t\t\t}");
 			break;
+
 		case 0xFFFF5555:  //LOAD ENVIADO
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", linkaddr_node_addr.u8[i]);
+			}
+			printf("\",");
+			printf("\n\r\t\t\t\"Type\"    :\t\"Load\",");
 			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log));
 			counter=counter+sizeof(aux_log);
-			printf("//LOG// LOAD con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
+			printf("\n\r\t\t\t\"Value\" :\n\r\t\t\t\"%d\"", aux_log);
+			//printf("//LOG// LOAD con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
 			break;
+
 		case 0xFFFF6666: //LOAD RECIBIDO
-			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
-			counter=counter+sizeof(aux_log);
 			memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
-			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
-			printf("//LOG// LOAD con valor %d recibido de ", aux_log);
+			counter=counter+sizeof(addr_log);
+			//printf("//LOG// LOAD con valor %d recibido de ", aux_log);
 			for(int i = 0; i < LINKADDR_SIZE; i++) {
 				if(i > 0 && i % 2 == 0) {
 					printf(".");
 				}
 				printf("%02x", addr_log.u8[i]);
 			}
-			printf(".\n\r");
+			printf("\",");
+			printf("\n\r\t\t\t\"Type\"    :\t\"Load\",");
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
+			counter=counter+sizeof(aux_log);
+			printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
+			//printf(".\n\r");
 			break;
+
 		case 0xFFFF7777:  //SHARE ENVIADO
+			for(int i = 0; i < LINKADDR_SIZE; i++) {
+				if(i > 0 && i % 2 == 0) {
+					printf(".");
+				}
+				printf("%02x", linkaddr_node_addr.u8[i]);
+			}
+			printf("\",");
+			printf("\n\r\t\t\t\"Type\"    :\t\"Share\",");
 			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log));
 			counter=counter+sizeof(aux_log);
-			printf("//LOG// SHARE con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
+			printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
+			//printf("//LOG// SHARE con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
 			break;
+
 		case 0xFFFF8888: //SHARE RECIBIDO
-			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
-			counter=counter+sizeof(aux_log);
 			memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
-			counter=counter+sizeof(addr_log)+(4-(sizeof(addr_log) % 4));
-			printf("//LOG// SHARE con valor %d recibido de ", aux_log);
+			counter=counter+sizeof(addr_log);
+			//printf("//LOG// SHARE con valor %d recibido de ", aux_log);
 			for(int i = 0; i < LINKADDR_SIZE; i++) {
 				if(i > 0 && i % 2 == 0) {
 					printf(".");
 				}
 				printf("%02x", addr_log.u8[i]);
 			}
-			printf(".\n\r");
+			printf("\",");
+			printf("\n\r\t\t\t\"Type\"    :\t\"Share\",");
+			memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
+			counter=counter+sizeof(aux_log);
+			printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
+			//printf(".\n\r");
 			break;
 		
 		default:
 			break;
 		}
+		if (counter+sizeof(code) >= mem_used)
+			printf("\n\r\t\t}");
+		else
+			printf("\n\r\t\t},");
 	}
+	printf("\n\r\t\t]");
+	printf("\n\r\t}");
 	memcpy(nvmc+0x504, &erase, 4);
 	memcpy(nvmc+0x508, &log, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
 	memcpy(nvmc+0x504, &read, 4);
@@ -1031,8 +1145,8 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					do
 					{
 						int_number_id = (int) random_list[c-1]->number_id;
-						memcpy(log+mem_counter, &int_number_id, sizeof(int_number_id));
-						memcpy(log+mem_counter+sizeof(int_number_id), &(random_list[c-1]->addr), sizeof(random_list[c-1]->addr));
+						memcpy(log+mem_counter, &(random_list[c-1]->addr), sizeof(random_list[c-1]->addr));
+						memcpy(log+mem_counter+sizeof(random_list[c-1]->addr), &int_number_id, sizeof(int_number_id));
 						mem_counter = mem_counter + sizeof(int_number_id) + sizeof(random_list[c-1]->addr);
 						c++;
 					} while (c < i);
@@ -1155,7 +1269,6 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 	mem_counter = mem_counter + sizeof(code) + sizeof(*sender_addr);
 	if(sizeof(*sender_addr) % 4 != 0)
 		mem_counter = mem_counter + (4-(sizeof(*sender_addr) % 4));
-	mem_counter = mem_counter + sizeof(code) + sizeof(*sender_addr);
 	memcpy(nvmc+0x504, &erase, 4);
 	memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
 	memcpy(nvmc+0x504, &write, 4);
@@ -1422,8 +1535,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			if(ready && ready_next){
 				memcpy(nvmc+0x504, &write, 4);
 				memcpy(log+mem_counter, &code, sizeof(code));
-				memcpy(log+mem_counter+4, p_load, sizeof(*p_load));
-				memcpy(log+mem_counter+4+sizeof(*p_load), &sender_link_address, sizeof(sender_link_address));
+				memcpy(log+mem_counter+4, &sender_link_address, sizeof(sender_link_address));
+				memcpy(log+mem_counter+4+sizeof(sender_link_address), p_load, sizeof(*p_load));
 				memcpy(nvmc+0x504, &read, 4);
 			}
 
@@ -1501,8 +1614,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			if(ready && ready_next){
 				memcpy(nvmc+0x504, &write, 4);
 				memcpy(log+mem_counter, &code, sizeof(code));
-				memcpy(log+mem_counter+4, &p_extra_int, sizeof(p_extra_int));
-				memcpy(log+mem_counter+4+sizeof(p_extra_int), &sender_link_address, sizeof(sender_link_address));
+				memcpy(log+mem_counter+4, &sender_link_address, sizeof(sender_link_address));
+				memcpy(log+mem_counter+4+sizeof(sender_link_address), &p_extra_int, sizeof(p_extra_int));
 				memcpy(nvmc+0x504, &read, 4);
 			}
 			mem_counter = mem_counter + sizeof(code) + sizeof(p_extra_int) + sizeof(sender_link_address);
@@ -1531,9 +1644,10 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 		if(ready && ready_next){
 			memcpy(nvmc+0x504, &write, 4);
 			memcpy(log+mem_counter, &code, sizeof(code));
-			memcpy(log+mem_counter+sizeof(code), &timestamp, sizeof(timestamp));
-			memcpy(log+mem_counter+sizeof(code)+sizeof(timestamp), &int_hlmac_len, sizeof(int_hlmac_len));
-			mem_counter = mem_counter + sizeof(code) + sizeof(timestamp) + sizeof(int_hlmac_len);
+			memcpy(log+mem_counter+sizeof(code), &sender_link_address, sizeof(sender_link_address));
+			memcpy(log+mem_counter+sizeof(code)+sizeof(sender_link_address), &timestamp, sizeof(timestamp));
+			memcpy(log+mem_counter+sizeof(code)+sizeof(sender_link_address)+sizeof(timestamp), &int_hlmac_len, sizeof(int_hlmac_len));
+			mem_counter = mem_counter + sizeof(code) + sizeof(sender_link_address) + sizeof(timestamp) + sizeof(int_hlmac_len);
 			for(int k = 0; k < int_hlmac_len; k++){
 				int_address = (int) received_hlmac_addr->address[k];
 				memcpy(log+mem_counter+sizeof(int_address)*k, &int_address, sizeof(int_address));
