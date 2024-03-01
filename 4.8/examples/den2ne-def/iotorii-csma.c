@@ -157,14 +157,14 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 #endif
 
 
-// #if LOG_NRF52840 == 1 //LOG EN NRF52840-DK
+#if IOTORII_NRF52840_LOG == 1 //LOG EN NRF52840-DK
 	uint8_t erase = 0x2, write=0x1, read=0x0;
 	int log = 0xF5000;
 	int nvmc = 0x4001E000;
 	int mem_counter = 0;
 	int page_mem_counter = 0xF4000;
 	int ready, ready_next;
-// #endif
+#endif
 
 /*---------------------------------------------------------------------------*/
 
@@ -184,6 +184,8 @@ clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
 clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
 int number_of_neighbours;
 int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
+
+clock_time_t convergence_time;
 
 static void init_sec (void)
 {
@@ -267,7 +269,7 @@ static int max_payload (void)
 /*---------------------------------------------------------------------------*/
 
 #if IOTORII_NRF52840_LOG == 1
-	void show_log(){
+	void read_log(){
 		printf("\n\r\t{\n\r" \
 			"\t\t\"MAC\"      :\t\"");
 		for(int i = 0; i < LINKADDR_SIZE; i++) {
@@ -525,6 +527,22 @@ static int max_payload (void)
 				}
 				printf("\"");
 				break;
+
+			case 0xFFFFBBBB:  //SHARE ENVIADO
+				for(int i = 0; i < LINKADDR_SIZE; i++) {
+					if(i > 0 && i % 2 == 0) {
+						printf(".");
+					}
+					printf("%02x", linkaddr_node_addr.u8[i]);
+				}
+				printf("\",");
+				printf("\n\r\t\t\t\"Type\"    :\t\"INFO\",");
+				printf("\n\r\t\t\t\"Content\" :\t\"Convergence\",");
+				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log));
+				counter=counter+sizeof(aux_log);
+				printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
+				//printf("//LOG// SHARE con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
+				break;
 			
 			default:
 				break;
@@ -539,6 +557,23 @@ static int max_payload (void)
 		memcpy(nvmc+0x504, &erase, 4);
 		memcpy(nvmc+0x508, &log, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
 		memcpy(nvmc+0x504, &read, 4);
+	}
+
+	void write_log(int code, list_t list){
+		memcpy(&ready, nvmc+0x400, 4);
+		memcpy(&ready_next, nvmc+0x408, 4);
+		if(ready && ready_next){
+			memcpy(nvmc+0x504, &write, 4);
+			memcpy(log+mem_counter, &code, sizeof(code));
+			mem_counter += sizeof(code);
+
+			memcpy(nvmc+0x504, &erase, 4);
+			memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+			memcpy(nvmc+0x504, &write, 4);
+			memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+			memcpy(nvmc+0x504, &read, 4);
+		}
+
 	}
 #endif
 
@@ -826,7 +861,6 @@ static void iotorii_handle_statistic_timer ()
 			printf("es edge\r\n");		
 			edge = 1;
 
-
 			#if IOTORII_NRF52840_LOG == 1
 				int code = 0xFFFF9999;
 				memcpy(&ready, nvmc+0x400, 4);
@@ -860,10 +894,10 @@ static void iotorii_handle_statistic_timer ()
 			else
 			{
 				printf("--> Vecino hijo  (flag, carga, in_out) --> ");	
-				if (count_hijos == 0){
+				// if (count_hijos == 0){
 					n_hijos_share++;
 					n_hijos_load++;
-				}
+				// }
 			}
 			
 			if (nb->flag == -1)
@@ -872,7 +906,7 @@ static void iotorii_handle_statistic_timer ()
 				printf("%d, %d, %d\r\n", nb->flag, nb->load, nb->in_out);		
 		}
 		
-		count_hijos = 1; //SE HA REALIZADO LA CUENTA DE LOS HIJOS
+		// count_hijos = 1; //SE HA REALIZADO LA CUENTA DE LOS HIJOS
 		
 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
 		{
@@ -988,6 +1022,7 @@ static void iotorii_handle_hello_timer ()
 
 void iotorii_handle_send_sethlmac_timer ()
 {
+	convergence_time = clock_time();
 	payload_entry_t *payload_entry;
 	payload_entry = list_pop(payload_entry_list); //POP PACKETBUF DE LA COLA
 	
@@ -1497,6 +1532,8 @@ void iotorii_handle_incoming_sethlmac_or_load (const uip_ipaddr_t *sender_addr, 
 						if (n_hijos_share == 0) //HA RECIBIDO SHARE DE TODOS LOS HIJOS
 						{
 							#if IOTORII_NODE_TYPE == 1 //SI LLEGA AL ROOT HA TERMINADO EL INTERCAMBIO DE DATOS
+								convergence_time = clock_time() - convergence_time;
+								printf("Ciclos hasta convergencia: %d\n\rciclos por segundo: %d\n\r", convergence_time, CLOCK_SECOND);
 								printf("FIN CONVERGENCIA\r\n");
 							#else //SI NO ES ROOT ENVIA SU SHARE
 								ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);	
@@ -1673,7 +1710,28 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						if (n_hijos_share == 0) //HA RECIBIDO SHARE DE TODOS LOS HIJOS
 						{
 							#if IOTORII_NODE_TYPE == 1 //SI LLEGA AL ROOT HA TERMINADO EL INTERCAMBIO DE DATOS
+								convergence_time = clock_time() - convergence_time;
+								printf("Ciclos hasta convergencia: %d\n\rciclos por segundo: %d\n\r", convergence_time, CLOCK_SECOND);
 								printf("FIN CONVERGENCIA\r\n");
+
+								#if IOTORII_NRF52840_LOG == 1
+									int code = 0xFFFFBBBB;
+									memcpy(&ready, nvmc+0x400, 4);
+									memcpy(&ready_next, nvmc+0x408, 4);
+									if(ready && ready_next){
+										memcpy(nvmc+0x504, &write, 4);
+										memcpy(log+mem_counter, &code, sizeof(code));
+										memcpy(log+mem_counter+sizeof(code), &convergence_time, sizeof(convergence_time));
+										memcpy(nvmc+0x504, &read, 4);
+										mem_counter = mem_counter + sizeof(code) + sizeof(convergence_time);
+									}
+									
+									memcpy(nvmc+0x504, &erase, 4);
+									memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+									memcpy(nvmc+0x504, &write, 4);
+									memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+									memcpy(nvmc+0x504, &read, 4);
+								#endif
 							#else //SI NO ES ROOT ENVIA SU SHARE
 								ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);	
 								ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
@@ -1968,7 +2026,7 @@ static void init (void)
 		// 	memcpy(nvmc+0x504, &read, 4);
 		// }
 		#if IOTORII_NRF52840_LOG == 1
-			ctimer_set(&log_timer, hello_start_time/2, show_log, NULL);
+			ctimer_set(&log_timer, hello_start_time/2, read_log, NULL);
 		#endif
 	#endif
 }
