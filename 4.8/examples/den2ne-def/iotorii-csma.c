@@ -163,7 +163,6 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 	int nvmc = 0x4001E000;
 	int mem_counter = 0;
 	int page_mem_counter = 0xF4000;
-	int ready, ready_next;
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -559,22 +558,26 @@ static int max_payload (void)
 		memcpy(nvmc+0x504, &read, 4);
 	}
 
-	void write_log(int code, list_t list){
+	bool check_write(){
+		int ready, ready_next;
 		memcpy(&ready, nvmc+0x400, 4);
 		memcpy(&ready_next, nvmc+0x408, 4);
-		if(ready && ready_next){
-			memcpy(nvmc+0x504, &write, 4);
-			memcpy(log+mem_counter, &code, sizeof(code));
-			mem_counter += sizeof(code);
-
-			memcpy(nvmc+0x504, &erase, 4);
-			memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-			memcpy(nvmc+0x504, &write, 4);
-			memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-			memcpy(nvmc+0x504, &read, 4);
-		}
-
+		return ready && ready_next;
 	}
+	
+	void update_mem_counter(){
+		memcpy(nvmc+0x504, &erase, 4);
+		memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
+		memcpy(nvmc+0x504, &write, 4);
+		memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
+		memcpy(nvmc+0x504, &read, 4);
+	}
+
+	void write_log(void *element){
+		memcpy(log+mem_counter, &element, sizeof(element));
+		mem_counter += sizeof(element);
+	}
+
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -719,9 +722,7 @@ void iotorii_handle_load_timer ()
 		
 		#if IOTORII_NRF52840_LOG == 1
 			int code = 0xFFFF5555;
-			memcpy(&ready, nvmc+0x400, 4);
-			memcpy(&ready_next, nvmc+0x408, 4);
-			if(ready && ready_next){
+			if(check_write()){
 				memcpy(nvmc+0x504, &write, 4);
 				memcpy(log+mem_counter, &code, sizeof(code));
 				memcpy(log+mem_counter+4, &(node->load), sizeof(node->load));
@@ -733,11 +734,7 @@ void iotorii_handle_load_timer ()
 			} else {
 				mem_counter = mem_counter + sizeof(code) + sizeof(node->load);
 			}
-			memcpy(nvmc+0x504, &erase, 4);
-			memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-			memcpy(nvmc+0x504, &write, 4);
-			memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-			memcpy(nvmc+0x504, &read, 4);
+			update_mem_counter();
 		#endif
 
 		#if IOTORII_IPV6 == 1 //IPv6
@@ -822,21 +819,13 @@ void iotorii_handle_share_upstream_timer ()
 
 		#if IOTORII_NRF52840_LOG == 1
 			int code = 0xFFFF7777, int_extra_load = (int) extra_load;
-			memcpy(&ready, nvmc+0x400, 4);
-			memcpy(&ready_next, nvmc+0x408, 4);
-			if(ready && ready_next){
+			if(check_write()){
 				memcpy(nvmc+0x504, &write, 4);
 				memcpy(log+mem_counter, &code, sizeof(code));
 				memcpy(log+mem_counter+4, &int_extra_load, sizeof(int_extra_load));
 				memcpy(nvmc+0x504, &read, 4);
 			}
-
-			mem_counter = mem_counter + sizeof(code) + sizeof(int_extra_load);
-			memcpy(nvmc+0x504, &erase, 4);
-			memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-			memcpy(nvmc+0x504, &write, 4);
-			memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-			memcpy(nvmc+0x504, &read, 4);
+			update_mem_counter();
 		#endif
 }
 
@@ -863,20 +852,13 @@ static void iotorii_handle_statistic_timer ()
 
 			#if IOTORII_NRF52840_LOG == 1
 				int code = 0xFFFF9999;
-				memcpy(&ready, nvmc+0x400, 4);
-				memcpy(&ready_next, nvmc+0x408, 4);
-				if(ready && ready_next){
+				if(check_write()){
 					memcpy(nvmc+0x504, &write, 4);
 					memcpy(log+mem_counter, &code, sizeof(code));
 					memcpy(nvmc+0x504, &read, 4);
 					mem_counter = mem_counter + sizeof(code);
 				}
-				
-				memcpy(nvmc+0x504, &erase, 4);
-				memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-				memcpy(nvmc+0x504, &write, 4);
-				memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-				memcpy(nvmc+0x504, &read, 4);
+				update_mem_counter();
 			#endif
 
 			ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME) * CLOCK_SECOND, iotorii_handle_load_timer, NULL); 
@@ -942,29 +924,16 @@ void check_neighbours_hello (list_t list){
 
 static void iotorii_handle_hello_timer ()
 {
-
 	#if IOTORII_NRF52840_LOG == 1
 		int number_of_hello_messages_int = number_of_hello_messages, code = 0xFFFF1111;
-
-		memcpy(&ready, nvmc+0x400, 4);
-		memcpy(&ready_next, nvmc+0x408, 4);
-		if(ready && ready_next){
+		if(check_write()){
 			memcpy(nvmc+0x504, &write, 4);
-			memcpy(log+mem_counter, &code, sizeof(code));
-			memcpy(log+mem_counter+4, &number_of_hello_messages_int, sizeof(number_of_hello_messages_int));
+			write_log(code);
+			memcpy(log+mem_counter, &number_of_hello_messages_int, sizeof(number_of_hello_messages_int));
 			memcpy(nvmc+0x504, &read, 4);
 		}
-
-		if(sizeof(number_of_hello_messages_int) % 4 != 0){
-			mem_counter = mem_counter + sizeof(code) + sizeof(number_of_hello_messages_int) + (4-(sizeof(number_of_hello_messages_int) % 4));
-		} else {
-			mem_counter = mem_counter + sizeof(code) + sizeof(number_of_hello_messages_int);
-		}
-		memcpy(nvmc+0x504, &erase, 4);
-		memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-		memcpy(nvmc+0x504, &write, 4);
-		memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-		memcpy(nvmc+0x504, &read, 4);
+		mem_counter = mem_counter + sizeof(number_of_hello_messages_int);
+		update_mem_counter();
 	#endif
 
 	#if IOTORII_IPV6 == 1 //IPv6
@@ -1235,9 +1204,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 
 				#if IOTORII_NRF52840_LOG == 1
 					int code = 0xFFFF3333, int_address_len = (int) addr.len, int_address, c=1, int_number_id, int_i = (int) i;
-					memcpy(&ready, nvmc+0x400, 4);
-					memcpy(&ready_next, nvmc+0x408, 4);
-					if(ready && ready_next){
+					if(check_write()){
 						memcpy(nvmc+0x504, &write, 4);
 						memcpy(log+mem_counter, &code, sizeof(code));
 						memcpy(log+mem_counter+sizeof(code), &timestamp, sizeof(timestamp));
@@ -1260,12 +1227,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 						} while (c < i);
 						memcpy(nvmc+0x504, &read, 4);
 					}
-					
-					memcpy(nvmc+0x504, &erase, 4);
-					memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-					memcpy(nvmc+0x504, &write, 4);
-					memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-					memcpy(nvmc+0x504, &read, 4);
+					update_mem_counter();
 				#endif
 
 				//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
@@ -1367,9 +1329,7 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 
 	#if IOTORII_NRF52840_LOG == 1
 		int code = 0xFFFF2222;
-		memcpy(&ready, nvmc+0x400, 4);
-		memcpy(&ready_next, nvmc+0x408, 4);
-		if(ready && ready_next){
+		if(check_write()){
 			memcpy(nvmc+0x504, &write, 4);
 			memcpy(log+mem_counter, &code, sizeof(code));
 			memcpy(log+mem_counter+4, sender_addr, sizeof(*sender_addr));
@@ -1379,11 +1339,7 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 		mem_counter = mem_counter + sizeof(code) + sizeof(*sender_addr);
 		if(sizeof(*sender_addr) % 4 != 0)
 			mem_counter = mem_counter + (4-(sizeof(*sender_addr) % 4));
-		memcpy(nvmc+0x504, &erase, 4);
-		memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-		memcpy(nvmc+0x504, &write, 4);
-		memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-		memcpy(nvmc+0x504, &read, 4);
+		update_mem_counter();
 	#endif
 
 	LOG_DBG("A Hello message received from ");
@@ -1644,9 +1600,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 
 			#if IOTORII_NRF52840_LOG == 1
 				int code = 0xFFFF6666;
-				memcpy(&ready, nvmc+0x400, 4);
-				memcpy(&ready_next, nvmc+0x408, 4);
-				if(ready && ready_next){
+				if(check_write()){
 					memcpy(nvmc+0x504, &write, 4);
 					memcpy(log+mem_counter, &code, sizeof(code));
 					memcpy(log+mem_counter+4, &sender_link_address, sizeof(sender_link_address));
@@ -1657,11 +1611,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				mem_counter = mem_counter + sizeof(code) + sizeof(*p_load) + sizeof(sender_link_address);
 				if(sizeof(sender_link_address) % 4 != 0)
 					mem_counter = mem_counter + (4-(sizeof(sender_link_address) % 4));
-				memcpy(nvmc+0x504, &erase, 4);
-				memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-				memcpy(nvmc+0x504, &write, 4);
-				memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-				memcpy(nvmc+0x504, &read, 4);
+				update_mem_counter();
 			#endif
 			
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
@@ -1716,21 +1666,14 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 
 								#if IOTORII_NRF52840_LOG == 1
 									int code = 0xFFFFBBBB;
-									memcpy(&ready, nvmc+0x400, 4);
-									memcpy(&ready_next, nvmc+0x408, 4);
-									if(ready && ready_next){
+									if(check_write()){
 										memcpy(nvmc+0x504, &write, 4);
 										memcpy(log+mem_counter, &code, sizeof(code));
 										memcpy(log+mem_counter+sizeof(code), &convergence_time, sizeof(convergence_time));
 										memcpy(nvmc+0x504, &read, 4);
 										mem_counter = mem_counter + sizeof(code) + sizeof(convergence_time);
 									}
-									
-									memcpy(nvmc+0x504, &erase, 4);
-									memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-									memcpy(nvmc+0x504, &write, 4);
-									memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-									memcpy(nvmc+0x504, &read, 4);
+									update_mem_counter();
 								#endif
 							#else //SI NO ES ROOT ENVIA SU SHARE
 								ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);	
@@ -1746,9 +1689,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 
 			#if IOTORII_NRF52840_LOG == 1
 				int code = 0xFFFF8888, p_extra_int = (int) *p_extra;
-				memcpy(&ready, nvmc+0x400, 4);
-				memcpy(&ready_next, nvmc+0x408, 4);
-				if(ready && ready_next){
+				if(check_write()){
 					memcpy(nvmc+0x504, &write, 4);
 					memcpy(log+mem_counter, &code, sizeof(code));
 					memcpy(log+mem_counter+4, &sender_link_address, sizeof(sender_link_address));
@@ -1758,11 +1699,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				mem_counter = mem_counter + sizeof(code) + sizeof(p_extra_int) + sizeof(sender_link_address);
 				if(sizeof(sender_link_address) % 4 != 0)
 					mem_counter = mem_counter + (4-(sizeof(sender_link_address) % 4));
-				memcpy(nvmc+0x504, &erase, 4);
-				memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-				memcpy(nvmc+0x504, &write, 4);
-				memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-				memcpy(nvmc+0x504, &read, 4);
+				update_mem_counter();
 			#endif
 			
 			free(p_extra);
@@ -1778,9 +1715,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 
 		#if IOTORII_NRF52840_LOG == 1
 			int code = 0xFFFF4444, int_hlmac_len = (int) received_hlmac_addr->len, int_address;
-			memcpy(&ready, nvmc+0x400, 4);
-			memcpy(&ready_next, nvmc+0x408, 4);
-			if(ready && ready_next){
+			if(check_write()){
 				memcpy(nvmc+0x504, &write, 4);
 				memcpy(log+mem_counter, &code, sizeof(code));
 				memcpy(log+mem_counter+sizeof(code), &sender_link_address, sizeof(sender_link_address));
@@ -1794,12 +1729,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				mem_counter = mem_counter + received_hlmac_addr->len*sizeof(int_address);
 				memcpy(nvmc+0x504, &read, 4);
 			}
-
-			memcpy(nvmc+0x504, &erase, 4);
-			memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-			memcpy(nvmc+0x504, &write, 4);
-			memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-			memcpy(nvmc+0x504, &read, 4);
+			update_mem_counter();
 		#endif
 
 		if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA AL HIJO
@@ -1810,9 +1740,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			{
 				#if IOTORII_NRF52840_LOG == 1
 					int code = 0xFFFFAAAA;
-					memcpy(&ready, nvmc+0x400, 4);
-					memcpy(&ready_next, nvmc+0x408, 4);
-					if(ready && ready_next){
+					if(check_write()){
 						memcpy(nvmc+0x504, &write, 4);
 						memcpy(log+mem_counter, &code, sizeof(code));
 						memcpy(log+mem_counter+sizeof(code), &int_hlmac_len, sizeof(int_hlmac_len));
@@ -1824,12 +1752,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						mem_counter = mem_counter + received_hlmac_addr->len*sizeof(int_address);
 						memcpy(nvmc+0x504, &read, 4);
 					}
-
-					memcpy(nvmc+0x504, &erase, 4);
-					memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-					memcpy(nvmc+0x504, &write, 4);
-					memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-					memcpy(nvmc+0x504, &read, 4);
+					update_mem_counter();
 				#endif
 
 				number_of_neighbours_flag = number_of_neighbours; //SE RESETEA PARA CADA ASIGNACIÓN DE HLMAC
@@ -1907,9 +1830,7 @@ static void iotorii_handle_sethlmac_timer ()
 
 	#if IOTORII_NRF52840_LOG == 1
 		int code = 0xFFFFAAAA, add_len = 1, int_address;
-		memcpy(&ready, nvmc+0x400, 4);
-		memcpy(&ready_next, nvmc+0x408, 4);
-		if(ready && ready_next){
+		if(check_write()){
 			memcpy(nvmc+0x504, &write, 4);
 			memcpy(log+mem_counter, &code, sizeof(code));
 			memcpy(log+mem_counter+sizeof(code), &add_len, sizeof(add_len));
@@ -1921,12 +1842,7 @@ static void iotorii_handle_sethlmac_timer ()
 			mem_counter = mem_counter + root_addr.len*sizeof(int_address);
 			memcpy(nvmc+0x504, &read, 4);
 		}
-
-		memcpy(nvmc+0x504, &erase, 4);
-		memcpy(nvmc+0x508, &page_mem_counter, 4); //ES NECESARIO BORRA LA PÁGINA DEL CONTADOR PARA VOLVER A ESCRIBIR
-		memcpy(nvmc+0x504, &write, 4);
-		memcpy(page_mem_counter+0xFFC, &mem_counter, 4); //DIRECCIÓN DÓNDE SE GUARDA EL TAMAÑO DEL LOG EN BYTES
-		memcpy(nvmc+0x504, &read, 4);
+		update_mem_counter();
 	#endif
 	
 	#if LOG_DBG_STATISTIC == 1
