@@ -1,0 +1,112 @@
+{
+	"Node" :[
+	{
+		"MAC"      :	"f4ce.36e6.38b4.a941",
+		"Type"     :	"Root",
+		"Message"  :	[ 
+		{
+			"Origin"  : 	"f4ce.36e6.38b4.a941",
+			"Type"    : 	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  :	"f4ce.36cc.ade2.3163",
+			"Type"    :	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  : 	"f4ce.36fb.c267.24e2",
+			"Type"    : 	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  :	"f4ce.36e6.38b4.a941",
+			"Type"    :	"SetHLMAC",
+			"Content" :
+			{
+				"Timestamp"  :	0,
+				"Prefix"     :	"01",
+				"Asignation" :	[
+					{
+						"ID"  :	"01",
+						"MAC" :	"f4ce.36cc.ade2.3163"
+					}
+				]
+			}
+		}
+		]
+	},
+	{
+		"MAC" 	   :	"f4ce.36cc.ade2.3163",
+		"Type"     :	"Common",
+		"Message"  :	[
+		{
+			"Origin"  : 	"f4ce.36e6.38b4.a941",
+			"Type"    : 	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  :	"f4ce.36cc.ade2.3163",
+			"Type"    :	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  : 	"f4ce.36fb.c267.24e2",
+			"Type"    : 	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  :	"f4ce.36e6.38b4.a941",
+			"Type"    :	"SetHLMAC",
+			"Content" :
+			{
+				"Timestamp"  :	0,
+				"Prefix"     :	"01",
+				"Asignation" :	[
+					{
+						"ID"  :	"01",
+						"MAC" :	"f4ce.36cc.ade2.3163"
+					}
+				]
+			}
+		}
+		]
+	},
+	{
+		"MAC" 	   :	"f4ce.36fb.c267.24e2",
+		"Type"     :	"Common",
+		"Message"  :	[
+		{
+			"Origin"  : 	"f4ce.36e6.38b4.a941",
+			"Type"    : 	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  :	"f4ce.36cc.ade2.3163",
+			"Type"    :	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  : 	"f4ce.36fb.c267.24e2",
+			"Type"    : 	"Hello",
+			"Content" :	{}
+		},
+		{
+			"Origin"  :	"f4ce.36e6.38b4.a941",
+			"Type"    :	"SetHLMAC",
+			"Content" :
+			{
+				"Timestamp"  :	0,
+				"Prefix"     :	"01",
+				"Asignation" :	[
+					{
+						"ID"  :	"01",
+						"MAC" :	"f4ce.36cc.ade2.3163"
+					}
+				]
+			}
+		}
+		]
+	}
+	]
+}

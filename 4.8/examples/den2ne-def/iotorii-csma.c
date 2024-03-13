@@ -36,7 +36,7 @@
 #ifdef IOTORII_CONF_HELLO_START_TIME
 	#define IOTORII_HELLO_START_TIME IOTORII_CONF_HELLO_START_TIME
 #else
-	#define IOTORII_HELLO_START_TIME 30 //Default Delay is 30 s
+	#define IOTORII_HELLO_START_TIME 60 //Default Delay is 30 s
 #endif
 
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
@@ -86,7 +86,7 @@
 #ifdef IOTORII_CONF_MAX_HELLO_DIFF
 	#define IOTORII_MAX_HELLO_DIFF IOTORII_CONF_MAX_HELLO_DIFF
 #else
-	#define IOTORII_MAX_HELLO_DIFF 5
+	#define IOTORII_MAX_HELLO_DIFF 1
 #endif
 
 /*CUANDO TERMINA EL PRIMER PASO DE ENVÍO DE CARGAS (NODOS EDGE) COMIENZA EL SHARE TIMER PARA LOS NODOS EDGE.
@@ -721,18 +721,11 @@ void iotorii_handle_load_timer ()
 	{
 		
 		#if IOTORII_NRF52840_LOG == 1
-			int code = 0xFFFF5555;
 			if(check_write()){
 				memcpy(nvmc+0x504, &write, 4);
-				memcpy(log+mem_counter, &code, sizeof(code));
-				memcpy(log+mem_counter+4, &(node->load), sizeof(node->load));
+				write_log(0xFFFF5555);
+				write_log(node->load);
 				memcpy(nvmc+0x504, &read, 4);
-			}
-
-			if(sizeof(node->load) % 4 != 0){
-				mem_counter = mem_counter + sizeof(code) + sizeof(node->load) + (4-(sizeof(node->load) % 4));
-			} else {
-				mem_counter = mem_counter + sizeof(code) + sizeof(node->load);
 			}
 			update_mem_counter();
 		#endif
@@ -818,11 +811,10 @@ void iotorii_handle_share_upstream_timer ()
 #endif
 
 		#if IOTORII_NRF52840_LOG == 1
-			int code = 0xFFFF7777, int_extra_load = (int) extra_load;
 			if(check_write()){
 				memcpy(nvmc+0x504, &write, 4);
-				memcpy(log+mem_counter, &code, sizeof(code));
-				memcpy(log+mem_counter+4, &int_extra_load, sizeof(int_extra_load));
+				write_log(0xFFFF7777);
+				write_log(extra_load);
 				memcpy(nvmc+0x504, &read, 4);
 			}
 			update_mem_counter();
@@ -847,16 +839,14 @@ static void iotorii_handle_statistic_timer ()
 		
 		if (!number_of_neighbours_flag)
 		{
-			printf("es edge\r\n");		
+			printf("es edge\r\n");
 			edge = 1;
 
 			#if IOTORII_NRF52840_LOG == 1
-				int code = 0xFFFF9999;
 				if(check_write()){
 					memcpy(nvmc+0x504, &write, 4);
-					memcpy(log+mem_counter, &code, sizeof(code));
+					write_log(0xFFFF9999);
 					memcpy(nvmc+0x504, &read, 4);
-					mem_counter = mem_counter + sizeof(code);
 				}
 				update_mem_counter();
 			#endif
@@ -865,6 +855,7 @@ static void iotorii_handle_statistic_timer ()
 		}
 		else
 		{
+			edge = 0;
 			printf("no es edge\r\n");
 		}
 		
@@ -925,14 +916,12 @@ void check_neighbours_hello (list_t list){
 static void iotorii_handle_hello_timer ()
 {
 	#if IOTORII_NRF52840_LOG == 1
-		int number_of_hello_messages_int = number_of_hello_messages, code = 0xFFFF1111;
 		if(check_write()){
 			memcpy(nvmc+0x504, &write, 4);
-			write_log(code);
-			memcpy(log+mem_counter, &number_of_hello_messages_int, sizeof(number_of_hello_messages_int));
+			write_log(0xFFFF1111);
+			write_log(number_of_hello_messages);
 			memcpy(nvmc+0x504, &read, 4);
 		}
-		mem_counter = mem_counter + sizeof(number_of_hello_messages_int);
 		update_mem_counter();
 	#endif
 
@@ -1203,26 +1192,21 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 				
 
 				#if IOTORII_NRF52840_LOG == 1
-					int code = 0xFFFF3333, int_address_len = (int) addr.len, int_address, c=1, int_number_id, int_i = (int) i;
 					if(check_write()){
+						int c=1;
 						memcpy(nvmc+0x504, &write, 4);
-						memcpy(log+mem_counter, &code, sizeof(code));
-						memcpy(log+mem_counter+sizeof(code), &timestamp, sizeof(timestamp));
-						memcpy(log+mem_counter+sizeof(code)+sizeof(timestamp), &int_address_len, sizeof(int_address_len));
-						mem_counter = mem_counter + sizeof(code) + sizeof(timestamp) + sizeof(int_address_len);
+						write_log(0xFFFF3333);
+						write_log(timestamp);
+						write_log(addr.len);
 						for(int k = 0; k < addr.len; k++){
-							int_address = (int) addr.address[k];
-							memcpy(log+mem_counter+sizeof(int_address)*k, &int_address, sizeof(int_address));
+							write_log(addr.address[k]);
 						}
-						mem_counter = mem_counter + addr.len*sizeof(int_address);
-						memcpy(log+mem_counter, &int_i, sizeof(int_i));
-						mem_counter = mem_counter + sizeof(int_i);
+						write_log(i);
 						do
 						{
-							int_number_id = (int) random_list[c-1]->number_id;
 							memcpy(log+mem_counter, &(random_list[c-1]->addr), sizeof(random_list[c-1]->addr));
-							memcpy(log+mem_counter+sizeof(random_list[c-1]->addr), &int_number_id, sizeof(int_number_id));
-							mem_counter = mem_counter + sizeof(int_number_id) + sizeof(random_list[c-1]->addr);
+							mem_counter = mem_counter + sizeof(random_list[c-1]->addr);
+							write_log(random_list[c-1]->number_id);
 							c++;
 						} while (c < i);
 						memcpy(nvmc+0x504, &read, 4);
@@ -1328,17 +1312,13 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 	const linkaddr_t *sender_addr = packetbuf_addr(PACKETBUF_ADDR_SENDER); //SE LEE EL BUFFER
 
 	#if IOTORII_NRF52840_LOG == 1
-		int code = 0xFFFF2222;
 		if(check_write()){
 			memcpy(nvmc+0x504, &write, 4);
-			memcpy(log+mem_counter, &code, sizeof(code));
-			memcpy(log+mem_counter+4, sender_addr, sizeof(*sender_addr));
+			write_log(0xFFFF2222);
+			memcpy(log+mem_counter, sender_addr, sizeof(*sender_addr));
+			mem_counter += sizeof(*sender_addr);
 			memcpy(nvmc+0x504, &read, 4);
 		}
-
-		mem_counter = mem_counter + sizeof(code) + sizeof(*sender_addr);
-		if(sizeof(*sender_addr) % 4 != 0)
-			mem_counter = mem_counter + (4-(sizeof(*sender_addr) % 4));
 		update_mem_counter();
 	#endif
 
@@ -1493,7 +1473,7 @@ void iotorii_handle_incoming_sethlmac_or_load (const uip_ipaddr_t *sender_addr, 
 								printf("FIN CONVERGENCIA\r\n");
 							#else //SI NO ES ROOT ENVIA SU SHARE
 								ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);	
-								ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
+								//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
 							#endif
 						}						
 					}
@@ -1599,18 +1579,14 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			str_sender = link_addr_to_str (sender_link_address, 1);	//LENGTH = 1 PARA MOSTRAR SOLO EL ID
 
 			#if IOTORII_NRF52840_LOG == 1
-				int code = 0xFFFF6666;
 				if(check_write()){
 					memcpy(nvmc+0x504, &write, 4);
-					memcpy(log+mem_counter, &code, sizeof(code));
-					memcpy(log+mem_counter+4, &sender_link_address, sizeof(sender_link_address));
-					memcpy(log+mem_counter+4+sizeof(sender_link_address), p_load, sizeof(*p_load));
+					write_log(0xFFFF6666);
+					memcpy(log+mem_counter, &sender_link_address, sizeof(sender_link_address));
+					mem_counter += sizeof(sender_link_address);
+					write_log(*p_load);
 					memcpy(nvmc+0x504, &read, 4);
 				}
-
-				mem_counter = mem_counter + sizeof(code) + sizeof(*p_load) + sizeof(sender_link_address);
-				if(sizeof(sender_link_address) % 4 != 0)
-					mem_counter = mem_counter + (4-(sizeof(sender_link_address) % 4));
 				update_mem_counter();
 			#endif
 			
@@ -1665,19 +1641,17 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 								printf("FIN CONVERGENCIA\r\n");
 
 								#if IOTORII_NRF52840_LOG == 1
-									int code = 0xFFFFBBBB;
 									if(check_write()){
 										memcpy(nvmc+0x504, &write, 4);
-										memcpy(log+mem_counter, &code, sizeof(code));
-										memcpy(log+mem_counter+sizeof(code), &convergence_time, sizeof(convergence_time));
+										write_log(0xFFFFBBBB);
+										write_log(convergence_time);
 										memcpy(nvmc+0x504, &read, 4);
-										mem_counter = mem_counter + sizeof(code) + sizeof(convergence_time);
 									}
 									update_mem_counter();
 								#endif
 							#else //SI NO ES ROOT ENVIA SU SHARE
 								ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);	
-								ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
+								//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
 							#endif
 						}						
 					}
@@ -1688,17 +1662,14 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			}
 
 			#if IOTORII_NRF52840_LOG == 1
-				int code = 0xFFFF8888, p_extra_int = (int) *p_extra;
 				if(check_write()){
 					memcpy(nvmc+0x504, &write, 4);
-					memcpy(log+mem_counter, &code, sizeof(code));
-					memcpy(log+mem_counter+4, &sender_link_address, sizeof(sender_link_address));
-					memcpy(log+mem_counter+4+sizeof(sender_link_address), &p_extra_int, sizeof(p_extra_int));
+					write_log(0xFFFF8888);
+					memcpy(log+mem_counter, &sender_link_address, sizeof(sender_link_address));
+					mem_counter += sizeof(sender_link_address);
+					write_log(*p_extra);
 					memcpy(nvmc+0x504, &read, 4);
 				}
-				mem_counter = mem_counter + sizeof(code) + sizeof(p_extra_int) + sizeof(sender_link_address);
-				if(sizeof(sender_link_address) % 4 != 0)
-					mem_counter = mem_counter + (4-(sizeof(sender_link_address) % 4));
 				update_mem_counter();
 			#endif
 			
@@ -1714,19 +1685,16 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 		free(new_hlmac_addr_str);
 
 		#if IOTORII_NRF52840_LOG == 1
-			int code = 0xFFFF4444, int_hlmac_len = (int) received_hlmac_addr->len, int_address;
 			if(check_write()){
 				memcpy(nvmc+0x504, &write, 4);
-				memcpy(log+mem_counter, &code, sizeof(code));
-				memcpy(log+mem_counter+sizeof(code), &sender_link_address, sizeof(sender_link_address));
-				memcpy(log+mem_counter+sizeof(code)+sizeof(sender_link_address), &timestamp, sizeof(timestamp));
-				memcpy(log+mem_counter+sizeof(code)+sizeof(sender_link_address)+sizeof(timestamp), &int_hlmac_len, sizeof(int_hlmac_len));
-				mem_counter = mem_counter + sizeof(code) + sizeof(sender_link_address) + sizeof(timestamp) + sizeof(int_hlmac_len);
-				for(int k = 0; k < int_hlmac_len; k++){
-					int_address = (int) received_hlmac_addr->address[k];
-					memcpy(log+mem_counter+sizeof(int_address)*k, &int_address, sizeof(int_address));
+				write_log(0xFFFF4444);
+				memcpy(log+mem_counter, &sender_link_address, sizeof(sender_link_address));
+				mem_counter = mem_counter + sizeof(sender_link_address);
+				write_log(timestamp);
+				write_log(received_hlmac_addr->len);
+				for(int k = 0; k < received_hlmac_addr->len; k++){
+					write_log(received_hlmac_addr->address[k]);
 				}
-				mem_counter = mem_counter + received_hlmac_addr->len*sizeof(int_address);
 				memcpy(nvmc+0x504, &read, 4);
 			}
 			update_mem_counter();
@@ -1739,17 +1707,13 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
 			{
 				#if IOTORII_NRF52840_LOG == 1
-					int code = 0xFFFFAAAA;
 					if(check_write()){
 						memcpy(nvmc+0x504, &write, 4);
-						memcpy(log+mem_counter, &code, sizeof(code));
-						memcpy(log+mem_counter+sizeof(code), &int_hlmac_len, sizeof(int_hlmac_len));
-						mem_counter = mem_counter + sizeof(code) + sizeof(int_hlmac_len);
-						for(int k = 0; k < int_hlmac_len; k++){
-							int_address = (int) received_hlmac_addr->address[k];
-							memcpy(log+mem_counter+sizeof(int_address)*k, &int_address, sizeof(int_address));
+						write_log(0xFFFFAAAA);
+						write_log(received_hlmac_addr->len);
+						for(int k = 0; k < received_hlmac_addr->len; k++){
+							write_log(received_hlmac_addr->address[k]);
 						}
-						mem_counter = mem_counter + received_hlmac_addr->len*sizeof(int_address);
 						memcpy(nvmc+0x504, &read, 4);
 					}
 					update_mem_counter();
@@ -1829,17 +1793,13 @@ static void iotorii_handle_sethlmac_timer ()
 	hlmactable_add(root_addr, timestamp);
 
 	#if IOTORII_NRF52840_LOG == 1
-		int code = 0xFFFFAAAA, add_len = 1, int_address;
 		if(check_write()){
 			memcpy(nvmc+0x504, &write, 4);
-			memcpy(log+mem_counter, &code, sizeof(code));
-			memcpy(log+mem_counter+sizeof(code), &add_len, sizeof(add_len));
-			mem_counter = mem_counter + sizeof(code) + sizeof(add_len);
-			for(int k = 0; k < add_len; k++){
-				int_address = (int) root_addr.address[k];
-				memcpy(log+mem_counter+sizeof(int_address)*k, &int_address, sizeof(int_address));
+			write_log(0xFFFFAAAA);
+			write_log(1);
+			for(int k = 0; k < 1; k++){
+				write_log(root_addr.address[k]);
 			}
-			mem_counter = mem_counter + root_addr.len*sizeof(int_address);
 			memcpy(nvmc+0x504, &read, 4);
 		}
 		update_mem_counter();
