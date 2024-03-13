@@ -481,11 +481,20 @@ def main():
                                     table_text[node_index[k]][0].undraw()
                                     table_text[node_index[k]][0] = Text(Point(150, 55+25*node_index[k]), data['Node'][k]['Message'][aux_last_message[k]]['Value'])
                                     table_text[node_index[k]][0].draw(win)
+                                elif data['Node'][k]['Message'][aux_last_message[k]]['Content'] == "Convergence":
+                                    convergence_time = float("{:.2f}".format(float(data['Node'][k]['Message'][aux_last_message[k]]['Value'])/128))
                             aux_last_message[k] += 1
                     share_nodes_prev.extend(share_nodes)
                     share_nodes = share_nodes_next.copy()
                     share_nodes_next.clear()
                     if share_done == 0:
+                        if time == 0:
+                            convergence_text = Text(Point(100, 60+25*len(node)), "Convergence time: " + str(convergence_time) + "s")
+                            convergence_text.draw(win)
+                        else:
+                            convergence_text.undraw()
+                            convergence_text = Text(Point(100, 60+25*len(node)), "Convergence time: " + str(convergence_time) + "s")
+                            convergence_text.draw(win)
                         key = win.getKey()
                         while key != "n":
                             key = win.getKey()
