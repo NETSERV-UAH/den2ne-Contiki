@@ -36,13 +36,13 @@
 #ifdef IOTORII_CONF_HELLO_START_TIME
 	#define IOTORII_HELLO_START_TIME IOTORII_CONF_HELLO_START_TIME
 #else
-	#define IOTORII_HELLO_START_TIME 60 //Default Delay is 60 s
+	#define IOTORII_HELLO_START_TIME 15 //Default Delay is 60 s
 #endif
 
 #ifdef IOTORII_CONF_HELLO_IDLE_TIME
 	#define IOTORII_HELLO_IDLE_TIME IOTORII_CONF_HELLO_IDLE_TIME
 #else
-	#define IOTORII_HELLO_IDLE_TIME 60 //Default Delay is 60 s
+	#define IOTORII_HELLO_IDLE_TIME 15 //Default Delay is 60 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA EL NODO ROOT HASTA QUE SE ENVÍA EL PRIMER MENSAJE SETHLMAC A LOS VECINOS
@@ -50,12 +50,12 @@
 #ifdef IOTORII_CONF_SETHLMAC_START_TIME
 	#define IOTORII_SETHLMAC_START_TIME IOTORII_CONF_SETHLMAC_START_TIME
 #else
-	#define IOTORII_SETHLMAC_START_TIME 10 //Default Delay is 1 s
+	#define IOTORII_SETHLMAC_START_TIME 1 //Default Delay is 1 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA UN NODO COMÚN HASTA QUE SE ENVÍA MENSAJE SETHLMAC A LOS VECINOS
 //RANGO = [IOTORII_CONF_SETHLMAC_DELAY/2 IOTORII_CONF_SETHLMAC_DELAY]
-#define IOTORII_CONF_SETHLMAC_DELAY 2
+#define IOTORII_CONF_SETHLMAC_DELAY 10
 #ifdef IOTORII_CONF_SETHLMAC_DELAY
 	#define IOTORII_SETHLMAC_DELAY IOTORII_CONF_SETHLMAC_DELAY
 #else
@@ -88,7 +88,7 @@
 #ifdef IOTORII_CONF_MAX_HELLO_DIFF
 	#define IOTORII_MAX_HELLO_DIFF IOTORII_CONF_MAX_HELLO_DIFF
 #else
-	#define IOTORII_MAX_HELLO_DIFF 1
+	#define IOTORII_MAX_HELLO_DIFF 2
 #endif
 
 /*CUANDO TERMINA EL PRIMER PASO DE ENVÍO DE CARGAS (NODOS EDGE) COMIENZA EL SHARE TIMER PARA LOS NODOS EDGE.
@@ -854,7 +854,10 @@ static void iotorii_handle_statistic_timer ()
 			#endif
 
 			//ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME) * CLOCK_SECOND, iotorii_handle_load_timer, NULL);
-			iotorii_handle_load_timer();
+			
+			#if IOTORII_NODE_TYPE > 1
+				iotorii_handle_load_timer();
+			#endif
 		}
 		else
 		{
@@ -891,14 +894,16 @@ static void iotorii_handle_statistic_timer ()
 		{
 			if (nb->load == 0)
 				load_null++; //SE CONTABILIZAN LOS VECINOS CON CARGA TODAVÍA DESCONOCIDA
-		}
-		
-		if (edge == 1) //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
-			ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);
-			//iotorii_handle_share_upstream_timer();	
+		}	
 
 		if (load_null != 0) //SI UN NODO SABE YA TODAS LAS CARGAS DE SUS VECINOS PUEDE COMENZAR CON EL REPARTO DE CARGAS
 			printf("//INFO STATISTICS// Faltan %d nodos por conocer su carga\r\n", load_null);
+		
+		#if IOTORII_NODE_TYPE > 1
+			if (edge == 1) //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
+				//ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);
+				iotorii_handle_share_upstream_timer();
+		#endif
 	}
 }
 
@@ -1250,7 +1255,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					clock_time_t sethlmac_delay_time = 0; //EL DELAY ANTES DE ENVIAR EL PRIMER MENSAJE SETHLMAC (ENVIADO POR ROOT) ES 0
 					
 					#if IOTORII_NODE_TYPE > 1 //SI NODO COMÚN SE PLANIFICAN DELAYS ANTES DE ENVIAR LOS DEMÁS MENSAJES SETHLMAC
-						sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 1000);
+						sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 128);
 						sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
 						
 						#if LOG_DBG_DEVELOPER == 1
@@ -1259,12 +1264,13 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					#endif
 					
 					list_add(payload_entry_list, payload_entry); //SE AÑADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
+					//printf("Tiempo: %d\n\r", sethlmac_delay_time);
 					ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL); //SET TIMER
 					//iotorii_handle_send_sethlmac_timer();
 				}
 				else //SI NO ESTÁ VACÍA NO SE CONFIGURA EL TIEMPO Y DIRECTAMENTE SE AÑADE LA ENTRADA DE PAYLOAD
 					list_add(payload_entry_list, payload_entry);
-					
+				
 				list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA	
 				
 
@@ -1511,7 +1517,6 @@ void iotorii_handle_incoming_sethlmac_or_load (const uip_ipaddr_t *sender_addr, 
 		if (!hlmactable_has_loop(*received_hlmac_addr)) //SI NO HAY BUCLE, SI SE LA MANDA AL HIJO
 		{
 			uint8_t is_added = hlmactable_add(*received_hlmac_addr, timestamp);
-
 			//BÚSQUEDA DE LA DIRECCIÓN DEL EMISOR EN LA LISTA DE VECINOS 
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
 			{
@@ -1648,6 +1653,15 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						printf("//INFO INCOMING SHARE// carga actual del nodo: %d\r\n", node->load);
 
 						n_hijos_share--; //SE RESTA EL HIJO DE LA CUENTA TOTAL DE HIJOS
+						printf("Hijos share: %d\n\r", n_hijos_share);
+						printf("Origen: ");
+						for(int i = 0; i < LINKADDR_SIZE; i++) {
+							if(i > 0 && i % 2 == 0) {
+								printf(".");
+							}
+							printf("%02x", sender->u8[i]);
+						}
+						printf("\n\r");
 						
 						if (n_hijos_share == 0) //HA RECIBIDO SHARE DE TODOS LOS HIJOS
 						{
@@ -1724,6 +1738,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
 			{
 				#if IOTORII_NRF52840_LOG == 1
+
 					if(check_write()){
 						memcpy(nvmc+0x504, &write, 4);
 						write_log(0xFFFFAAAA);
@@ -1785,6 +1800,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 #if IOTORII_IPV6 != 1 //NO IPv6
 	void iotorii_operation (void)
 	{
+		printf("Longitud: %d\n\r", packetbuf_datalen());
 		if (packetbuf_holds_broadcast())
 		{
 			if (packetbuf_datalen() == 0) //SI LA LONGITUD ES NULA, SE HA RECIBIDO UN PAQUETE HELLO

@@ -22,26 +22,6 @@ def draw_next(win):
     text.draw(win)
 
 def create_arrow(origin, destiny, mes_type, flag):                              #FLAG TO AVOID CONFUSING ARROW DIRECTIONS
-    #if destiny.getCenter().getX() - origin.getCenter().getX() > 200: # ORIGIN AT DESTINY'S RIGHT
-    #    point_origin = Point(origin.getP2().getX(),
-    #                         origin.getP2().getY()-origin.getRadius()) #RIGHT
-    #    point_destiny = Point(destiny.getP1().getX(),
-    #                          destiny.getP1().getY()+destiny.getRadius()) #LEFT
-    #elif origin.getCenter().getX() - destiny.getCenter().getX() > 200: # ORIGIN AT DESTINY'S LEFT
-    #    point_origin = Point(origin.getP1().getX(),
-    #                         origin.getP1().getY()+origin.getRadius()) #LEFT
-    #    point_destiny = Point(destiny.getP2().getX(),
-    #                          destiny.getP2().getY()-destiny.getRadius()) #RIGHT
-    #elif destiny.getCenter().getY() - origin.getCenter().getY() < 100: # ORIGIN BELOW DESTINY
-    #    point_origin = Point(origin.getP1().getX()+origin.getRadius(),
-    #                         origin.getP1().getY()) #UP
-    #    point_destiny = Point(destiny.getP2().getX()-destiny.getRadius(),
-    #                          destiny.getP2().getY()) #DOWN
-    #else: #origin.getCenter().getY() - destiny.getCenter().getY() > 100: # ORIGIN ABOVE DESTINY
-    #    point_origin = Point(origin.getP2().getX()-origin.getRadius(),
-    #                         origin.getP2().getY()) #DOWN
-    #    point_destiny = Point(destiny.getP1().getX()+destiny.getRadius(),
-    #                          destiny.getP1().getY()) #UP
     if abs(origin.getCenter().getX() - destiny.getCenter().getX()) > abs(origin.getCenter().getY() - destiny.getCenter().getY()):
         if origin.getCenter().getX() - destiny.getCenter().getX() > 0:                  #ORIGIN AT DESTINY'S LEFT
             point_origin = Point(origin.getP1().getX(),
@@ -78,58 +58,6 @@ def create_arrow(origin, destiny, mes_type, flag):                              
     return arrow
 
 def arrow_text(arrow, message, mac):
-    # if abs(arrow.getP1().getX() - arrow.getP2().getX()) > abs(arrow.getP1().getY() - arrow.getP2().getY()):
-    #     if arrow.getP1().getX() - arrow.getP2().getX() > 0:                             #FROM LEFT TO RIGHT
-    #         desfaseX = 0
-    #         desfaseY = -25
-    #     else:                                                                           #FROM LEFT TO RIGHT
-    #         desfaseX = 0
-    #         desfaseY = +25
-    # else:
-    #     if arrow.getP1().getY() - arrow.getP2().getY() > 0:                             #UPWARDS
-    #         if (message['Type'] == "SetHLMAC"):
-    #             desfaseX = 60
-    #             desfaseY = 15
-    #         else:
-    #             desfaseX = 20
-    #             desfaseY = 0
-    #     else:                                                                           #DOWNWARDS
-    #         if (message['Type'] == "SetHLMAC"):
-    #             desfaseX = -60
-    #             desfaseY = -15
-    #         else:
-    #             desfaseX = -20
-    #             desfaseY = 0
-    # if (message['Type'] == "Hello"):
-    #     return Text(Point(arrow.getCenter().getX()-abs(desfaseX), arrow.getCenter().getY()+abs(desfaseY)), message['Type'])
-    # elif (message['Type'] == "SetHLMAC"):
-    #     return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message['Content']['Prefix'] + '.' + message['Content']['HLMAC'][mac])
-    # elif (message['Type'] == "Load"):
-    #     return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message["Value"])
-    # elif (message['Type'] == "Share"):
-    #     return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message["Value"])
-    # if abs(arrow.getP1().getX() - arrow.getP2().getX()) > abs(arrow.getP1().getY() - arrow.getP2().getY()):
-    #     if arrow.getP1().getX() - arrow.getP2().getX() > 0:                             #FROM LEFT TO RIGHT
-    #         desfaseX = 0
-    #         desfaseY = -25
-    #     else:                                                                           #FROM LEFT TO RIGHT
-    #         desfaseX = 0
-    #         desfaseY = +25
-    # else:
-    #     if arrow.getP1().getY() - arrow.getP2().getY() > 0:                             #UPWARDS
-    #         if (message['Type'] == "SetHLMAC"):
-    #             desfaseX = 60
-    #             desfaseY = 15
-    #         else:
-    #             desfaseX = 20
-    #             desfaseY = 0
-    #     else:                                                                           #DOWNWARDS
-    #         if (message['Type'] == "SetHLMAC"):
-    #             desfaseX = -60
-    #             desfaseY = -15
-    #         else:
-    #             desfaseX = -20
-    #             desfaseY = 0
     if abs(arrow.getP1().getY() - arrow.getP2().getY()) > 70:
         return Text(Point(arrow.getCenter().getX()-35, arrow.getCenter().getY()), message['Type'])
     elif arrow.getP1().getX() - arrow.getP2().getX() < 200 and abs(arrow.getP1().getY() - arrow.getP2().getY()) == 70:
@@ -138,18 +66,8 @@ def arrow_text(arrow, message, mac):
         return Text(Point(arrow.getCenter().getX(), arrow.getCenter().getY()+30), message['Type'])
     elif abs(arrow.getP1().getY() - arrow.getP2().getY()) == 0:
         return Text(Point(arrow.getCenter().getX()+60, arrow.getCenter().getY()-15), message['Type'])
-    # elif arrow.getP1().getX() - arrow.getP2().getX() == -400 and arrow.getP1().getY() - arrow.getP2().getY() == -35:
-    #     return Text(Point(arrow.getCenter().getX(), arrow.getCenter().getY()), message['Type'])
     else: 
         return Text(Point(arrow.getCenter().getX(), arrow.getCenter().getY()), message['Type'])
-    # if (message['Type'] == "Hello"):
-    #     return Text(Point(arrow.getCenter().getX()-abs(desfaseX), arrow.getCenter().getY()+abs(desfaseY)), message['Type'])
-    # elif (message['Type'] == "SetHLMAC"):
-    #     return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message['Content']['Prefix'] + '.' + message['Content']['HLMAC'][mac])
-    # elif (message['Type'] == "Load"):
-    #     return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message["Value"])
-    # elif (message['Type'] == "Share"):
-    #     return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message["Value"])
 
 def show_info(win, num_nodes):
     info = []
@@ -191,62 +109,6 @@ def draw_node(win, circle, num):
     text_node.draw(win).setSize(25)
 
 def node_conn(win, data):
-    # # node_conn2 = np.zeros((len(data['Node']), len(data['Node'])), dtype=int)
-    # node_conn = [[] for i in range(len(data['Node']))]
-    # node = np.empty(len(data['Node']), dtype=Circle)
-    # for c in range(len(data['Node'])):
-    #     for k in range(len(data['Node'])):
-    #         for i in range(len(data['Node'][c]['Message'])):
-    #             if data['Node'][c]['Message'][i]['Origin'] == data['Node'][k]['MAC']:
-    #                 # node_conn2[c][k] = 1
-    #                 if data['Node'][c]['Message'][i]['Origin'] != data['Node'][c]['MAC'] and not k in node_conn[c]:
-    #                     node_conn[c].append(k)
-    # print(node_conn)
-    # # if len(node_conn[0]) == 1:
-    # #     node.append(Circle(Point(700,100), 20))
-    # # elif len(node_conn[0]) == 2 and node_conn[0][0] in node_conn[node_conn[0][0]]:
-    # flag_all_conn = 0
-    # for l in node_conn[0]:
-    #     for m in node_conn[0]:
-    #         if l != m:
-    #             if not m in node_conn[l]:
-    #                 flag_all_conn = 1
-    # if flag_all_conn == 1:
-    #     node[0] = Circle(Point(700,100), 20)
-    #     if len(node_conn[0]) == 1:
-    #         node[node_conn[0][0]] = Circle(Point(node[0].getCenter().getX(), node[0].getCenter().getY()+200), 20)
-    #     elif len(node_conn[0]) == 2:
-    #         node[node_conn[0][0]] = Circle(Point(node[0].getCenter().getX()-200, node[0].getCenter().getY()+200), 20)
-    #         node[node_conn[0][1]] = Circle(Point(node[0].getCenter().getX()+200, node[0].getCenter().getY()+200), 20)
-    #     elif len(node_conn[0]) == 3:
-    #         node[node_conn[0][0]] = Circle(Point(node[0].getCenter().getX()-200, node[0].getCenter().getY()+200), 20)
-    #         node[node_conn[0][1]] = Circle(Point(node[0].getCenter().getX(), node[0].getCenter().getY()+400), 20)
-    #         node[node_conn[0][2]] = Circle(Point(node[0].getCenter().getX()+200, node[0].getCenter().getY()+200), 20)
-    # # if sum(node_conn[0]) == 2:
-    # #     node.append(Circle(Point(700,100), 20))
-    # else:
-    #     node[0] = Circle(Point(700,400), 20)
-    #     list_aux = []
-    #     for c in node_conn[0]:
-    #         if c != node_conn[0][0] and c in node_conn[node_conn[0][0]]:
-    #             list_aux.append(c)
-    #     if len(list_aux) == 0:
-    #         node[node_conn[0][0]] = Circle(Point(node[0].getCenter().getX()-200, node[0].getCenter().getY()), 20)
-    #     if len(list_aux) == 1:
-    #         node[node_conn[0][0]] = Circle(Point(node[0].getCenter().getX()-200, node[0].getCenter().getY()+200), 20)
-    #         node[list_aux[0]] = Circle(Point(node[0].getCenter().getX()+200, node[0].getCenter().getY()+200), 20)
-        
-
-    #     list_aux = []
-    #     for c in node_conn[node_conn[0][0]]:
-    #         if c != node_conn[0][0] and c in node_conn[node_conn[0][0]]:
-    #             list_aux.append(c)
-    #     if len(list_aux) == 0:
-    #         node[node_conn[0][0]] = Circle(Point(node[0].getCenter().getX()-200, node[0].getCenter().getY()), 20)
-    #     if len(list_aux) == 1:
-    #         node[node_conn[0][0]] = Circle(Point(node[0].getCenter().getX()-200, node[0].getCenter().getY()+200), 20)
-    #         node[list_aux[0]] = Circle(Point(node[0].getCenter().getX()+200, node[0].getCenter().getY()+200), 20)
-    
     len_hlmac_ini = 2
     len_hlmac_step = 3
     max_step = int(0)
@@ -260,16 +122,6 @@ def node_conn(win, data):
     node_index = np.empty(len(data['Node']), dtype=int)
     hlmac_len_list = [[] for i in range(max_step)]
 
-    # for k in range(len(data['Node'])):
-    #     added_flag = 0
-    #     for c in range(len(data['Node'][k]['Message'])):
-    #         if data['Node'][k]['Message'][c]['Type'] == "INFO" and data['Node'][k]['Message'][c]['Content'] == "HLMAC added" and added_flag == 0:
-    #             for l in range(max_step):
-    #                 if len(data['Node'][k]['Message'][c]['Value']) == len_hlmac_ini + len_hlmac_step * l:
-    #                     hlmac_len_list[l].append(k)
-    #                     added_flag = 1
-    #                     break
-    
     added_nodes = []
     hlmac_list = [[] for i in range(max_step)]
     for l in range(max_step):
@@ -304,13 +156,7 @@ def node_conn(win, data):
             index += 1
             node[hlmac_len_list[c][k]] = Circle(Point(650-x_offset,50+y_offset+220*c), 30)
             x_offset -= 200
-            y_offset = -y_offset
-
-    # if len(list_len_5) % 2 == 0:
-    #     x_offset = ((len(list_len_5) / 2) - 1) * 100 + 50
-    # else:
-    #     x_offset = ((len(list_len_5) / 2) - 1) * 100
-    
+            y_offset = -y_offset    
     return node, node_index
     
 
@@ -325,29 +171,6 @@ def main():
     data = json_file("prueba_demo_4_mesh.json")
 
     node, node_index = node_conn(win, data)
-
-    # node = []
-    # node.append(Circle(Point(700,100), 20))
-    # node.append(Circle(Point(500,350), 20))
-    # node.append(Circle(Point(900,350), 20))
-
-    #node.append(draw_node(win, Point(700,100), len(node)+1))
-    #node.append(draw_node(win, Point(400,350), len(node)+1))
-    #node.append(draw_node(win, Point(1000,350), len(node)+1))
-    #node.append(draw_node(win, Point(700,600), len(node)+1))
-
-    #node.append(Circle(Point(700,100), 20))
-    #node.append(Circle(Point(400,350), 20))
-    #node.append(Circle(Point(1000,350), 20))
-    #node.append(Circle(Point(700,600), 20))
-
-    #node.append(Circle(Point(700,100), 20))
-    #node.append(Circle(Point(700,300), 20))
-    #node.append(Circle(Point(500,550), 20))
-    #node.append(Circle(Point(900,550), 20))
-    #node.append(Circle(Point(300,750), 20))
-    #node.append(Circle(Point(1100,550), 20))
-    #node.append(Circle(Point(1000,750), 20))
 
     list_mac = []
     dictionary = {}
