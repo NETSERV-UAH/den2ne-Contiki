@@ -185,6 +185,8 @@ def main():
     #        total_messages = len(data['Node'][k]['Message'])
     
     # root_index = 0
+    
+    #NUMBER OF ITERATIONS
     for k in range(len(data['Node'])):
         if data['Node'][k]['Type'] == "Root":
             # root_index = k
