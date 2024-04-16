@@ -35,14 +35,14 @@ def create_arrow(origin, destiny, mes_type, flag):                              
                                   destiny.getP1().getY()+destiny.getRadius()+flag*4)    #LEFT
     else:
         if origin.getCenter().getY() - destiny.getCenter().getY() > 0:                  #ORIGIN BELOW DESTINY
-            point_origin = Point(origin.getP1().getX()+origin.getRadius()-flag*4,
+            point_origin = Point(origin.getP1().getX()+origin.getRadius(),#-flag*4,
                                  origin.getP1().getY())                                 #UP
-            point_destiny = Point(destiny.getP2().getX()-destiny.getRadius()-flag*4,
+            point_destiny = Point(destiny.getP2().getX()-destiny.getRadius(),#-flag*4,
                                   destiny.getP2().getY())                               #DOWN
         else:                                                                           #ORIGIN ABOVE DESTINY
-            point_origin = Point(origin.getP2().getX()-origin.getRadius()+flag*4,
+            point_origin = Point(origin.getP2().getX()-origin.getRadius(),#+flag*4,
                                  origin.getP2().getY())                                 #DOWN
-            point_destiny = Point(destiny.getP1().getX()+destiny.getRadius()+flag*4,
+            point_destiny = Point(destiny.getP1().getX()+destiny.getRadius(),#+flag*4,
                                   destiny.getP1().getY())                               #UP
         
     arrow = Line(point_origin, point_destiny)
@@ -89,10 +89,7 @@ def arrow_text(arrow, message, mac):
     elif (message['Type'] == "Share"):
         return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message["Value"])
 
-def show_info(win, num_nodes):
-    info = []
-    table_rec = np.empty((num_nodes, 3), dtype=Rectangle)
-    table_text = np.empty((num_nodes, 3), dtype=Text)
+def show_table(win, num_nodes):
     Rectangle(Point(70, 20), Point(230, 40)).draw(win).setFill("light blue")
     Text(Point(150, 32), "HLMAC").draw(win)
     Rectangle(Point(230, 20), Point(310, 40)).draw(win).setFill("light blue")
@@ -100,30 +97,41 @@ def show_info(win, num_nodes):
     Rectangle(Point(310, 20), Point(390, 40)).draw(win).setFill("light blue")
     Text(Point(350, 32), "SHARE").draw(win)
 
-    for i in range(num_nodes):
-        Rectangle(Point(10, 40+25*i), Point(70, 40+25*(i+1))).draw(win).setFill("light blue")
-        info.append(Text(Point(40, 30+25*(i+1)), "Node " + str(i+1)))
-        info[i].draw(win)
-        table_rec[i][0] = Rectangle(Point(70,  40+25*i), Point(230, 40+25*(i+1)))
-        table_rec[i][1] = Rectangle(Point(230, 40+25*i), Point(310, 40+25*(i+1)))
-        table_rec[i][2] = Rectangle(Point(310, 40+25*i), Point(390, 40+25*(i+1)))
-        table_text[i][0] = Text(Point(150, 55+25*i), "-")
-        table_text[i][1] = Text(Point(270, 55+25*i), "-")
-        table_text[i][2] = Text(Point(350, 55+25*i), "-")
-        for c in range(3):
-            table_rec[i][c].draw(win)
-            table_text[i][c].draw(win)
-    return table_text
+def show_node_table(win, number):
+    Rectangle(Point(10, 40+25*(number-1)), Point(70, 40+25*number)).draw(win).setFill("light blue")
+    Text(Point(40, 30+25*number), "Node " + str(number)).draw(win)
+    Rectangle(Point(70,  40+25*(number-1)), Point(230, 40+25*number)).draw(win)
+    Rectangle(Point(230, 40+25*(number-1)), Point(310, 40+25*number)).draw(win)
+    Rectangle(Point(310, 40+25*(number-1)), Point(390, 40+25*number)).draw(win)
+
+    # for i in range(num_nodes):
+    #     Rectangle(Point(10, 40+25*i), Point(70, 40+25*(i+1))).draw(win).setFill("light blue")
+    #     Text(Point(40, 30+25*(i+1)), "Node " + str(i+1)).draw(win)
+    #     Rectangle(Point(70,  40+25*i), Point(230, 40+25*(i+1))).draw(win)
+    #     Rectangle(Point(230, 40+25*i), Point(310, 40+25*(i+1))).draw(win)
+    #     Rectangle(Point(310, 40+25*i), Point(390, 40+25*(i+1))).draw(win)
+    #     table_text[i][0] = Text(Point(150, 55+25*i), "-")
+    #     table_text[i][1] = Text(Point(270, 55+25*i), "-")
+    #     table_text[i][2] = Text(Point(350, 55+25*i), "-")
+    #     for c in range(3):
+    #         table_rec[i][c].draw(win)
+    #         table_text[i][c].draw(win)
+    # return table_text
 
 def draw_nodes(win, dictionary):
     for val in dictionary.values():
-        val[0].draw(win)
-        val[1].draw(win)
+        val["Circle"].draw(win)
+        val["Text"].draw(win)
 
-def erase_node(circle, text):
-    if type(circle) == Text:
-        circle.undraw()
-        text.undraw()
+def draw_node_info(win, node):
+    node["HLMAC"].draw(win)
+    node["LOAD"].draw(win)
+    node["SHARE"].draw(win)
+
+def erase_nodes(dictionary):
+    for val in dictionary.values():
+        val["Circle"].undraw()
+        val["Text"].undraw()
 
 def node_conn(win, data, time, dictionary):
 
@@ -136,10 +144,10 @@ def node_conn(win, data, time, dictionary):
             if data['Node'][k]['Message'][c]['Type'] == "INFO" and data['Node'][k]['Message'][c]['Content'] == "HLMAC added" and data['Node'][k]['Message'][c]['Timestamp'] == str(time):
                 if int((len(data['Node'][k]['Message'][c]['Value']) - len_hlmac_ini)/len_hlmac_step + 1) > max_step:
                     max_step = int((len(data['Node'][k]['Message'][c]['Value']) - len_hlmac_ini)/len_hlmac_step + 1)
-
-    node = np.empty(len(data['Node']), dtype=Circle)
-    node_text = np.empty(len(data['Node']), dtype=Text)
-    node_index = np.empty(len(data['Node']), dtype=int)
+    #breakpoint()
+    # node = np.empty(len(data['Node']), dtype=Circle)
+    # node_text = np.empty(len(data['Node']), dtype=Text)
+    # node_index = np.empty(len(data['Node']), dtype=int)
     hlmac_len_list = [[] for i in range(max_step)]
 
     added_nodes = []
@@ -160,9 +168,10 @@ def node_conn(win, data, time, dictionary):
                             hlmac_len_list[l].append(k)
                             hlmac_list[l].append(data['Node'][k]['Message'][c]['Value'])
                             added_nodes.append(k)
-
+    #breakpoint()
     #ASSIGNS POSITION IN DRAWING ACCORDING TO HLMAC LENGTH
-    index = 0
+    # index = 0
+    erase_nodes(dictionary)
     for c in range(len(hlmac_len_list)):
         if c == 0: #or len(hlmac_len_list[c]) <= 2:
             y_offset = 0
@@ -170,20 +179,26 @@ def node_conn(win, data, time, dictionary):
             y_offset = -35
         x_offset = ((len(hlmac_len_list[c]) / 2) - 1) * 200
         for k in range(len(hlmac_len_list[c])):
-            node_index[index] = hlmac_len_list[c][k]
+            # node_index[index] = hlmac_len_list[c][k]
             #dict_circle.update({data['Node'][hlmac_len_list[c][k]]['MAC']: Circle(Point(650-x_offset,50+y_offset+220*c), 20)})
-            node[hlmac_len_list[c][k]] = Circle(Point(650-x_offset,50+y_offset+220*c), 20)
-            index += 1
-            while not index-1 in added_nodes and index <= len(data['Node']):
-                index += 1
+            #node[hlmac_len_list[c][k]] = Circle(Point(650-x_offset,50+y_offset+220*c), 20)
+            # index += 1
+            # while not index-1 in added_nodes and index <= len(data['Node']):
+            #     index += 1
             x_offset -= 200
             y_offset = -y_offset
             #dict_text.update({data['Node'][hlmac_len_list[c][k]]['MAC']: Circle(Point(650-x_offset,50+y_offset+220*c), 20)})
-            node_text[hlmac_len_list[c][k]] = Text(node[hlmac_len_list[c][k]].getCenter(), str(index))
+            #node_text[hlmac_len_list[c][k]] = Text(node[hlmac_len_list[c][k]].getCenter(), str(index))
+            #breakpoint()
             if not data['Node'][hlmac_len_list[c][k]]['MAC'] in dictionary:
-                dictionary[data['Node'][hlmac_len_list[c][k]]['MAC']] = [Circle(Point(650-x_offset,50+y_offset+220*c), 20), Text(Circle(Point(650-x_offset,50+y_offset+220*c), 20).getCenter(), str(len(dictionary.keys())+1))]
-    breakpoint()  
-    return node, node_text, node_index, dictionary
+                dictionary[data['Node'][hlmac_len_list[c][k]]['MAC']] = {"Circle": Circle(Point(500-x_offset,50+y_offset+220*c), 20), "Text": Text(Circle(Point(500-x_offset,50+y_offset+220*c), 20).getCenter(), str(len(dictionary.keys())+1))}
+                dictionary[data['Node'][hlmac_len_list[c][k]]['MAC']].update({"HLMAC": Text(Point(150, 55+25*(len(dictionary.keys())-1)), "-"), "LOAD": Text(Point(270, 55+25*(len(dictionary.keys())-1)), "-"), "SHARE": Text(Point(350, 55+25*(len(dictionary.keys())-1)), "-")})
+                show_node_table(win, len(dictionary.keys()))
+                draw_node_info(win, dictionary[data['Node'][hlmac_len_list[c][k]]['MAC']])
+            else:
+                dictionary[data['Node'][hlmac_len_list[c][k]]['MAC']].update({"Circle": Circle(Point(500-x_offset,50+y_offset+220*c), 20), "Text": Text(Circle(Point(500-x_offset,50+y_offset+220*c), 20).getCenter(), dictionary[data['Node'][hlmac_len_list[c][k]]['MAC']]["Text"].getText())})
+    #breakpoint()
+    return dictionary
     
 
 def main():
@@ -221,7 +236,7 @@ def main():
     #node.append(Circle(Point(1000,750), 20))
 
     dictionary = {}
-    table_text  = show_info(win, len(data['Node']))
+    show_table(win, len(data['Node']))
 
     #for k in range(len(data['Node'])):
     #    if data['Node'][k]['Type'] == "Root":
@@ -264,7 +279,7 @@ def main():
         #             key = win.getKey()
 
         #NODE CONTAINS EACH NODE'S CIRCLE AND NODE_INDEX ITS NUMBER
-        node, node_text, node_index, dictionary = node_conn(win, data, time, dictionary)
+        dictionary = node_conn(win, data, time, dictionary)
         # list_mac = []
         # dictionary = {}
         # for i in range(len(data['Node'])):
@@ -290,7 +305,7 @@ def main():
                     while first_timestamp[k] <= time and last_message[k] < len(data['Node'][k]['Message']) and data['Node'][k]['Message'][last_message[k]]['Type'] != "SetHLMAC": #(data['Node'][k]['Message'][last_message[k]]['Type'] == "Hello" or data['Node'][k]['Message'][last_message[k]]['Type'] == "INFO"):
                         if data['Node'][k]['MAC'] != data['Node'][k]['Message'][last_message[k]]['Origin'] and data['Node'][k]['Message'][last_message[k]]['Type'] == 'Hello':
                             # breakpoint()
-                            arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][last_message[k]]['Origin']][0], dictionary[data['Node'][k]['MAC']][0], data['Node'][k]['Message'][last_message[k]]['Type'], 0))
+                            arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][last_message[k]]['Origin']]["Circle"], dictionary[data['Node'][k]['MAC']]["Circle"], data['Node'][k]['Message'][last_message[k]]['Type'], 0))
                             arrow[len(arrow)-1].setWidth(3)
                             arrow[len(arrow)-1].draw(win)
                             arrow_message.append(arrow_text(arrow[len(arrow)-1], data['Node'][k]['Message'][last_message[k]], data['Node'][k]['MAC']))
@@ -300,9 +315,9 @@ def main():
                                 if not data['Node'][k]['MAC'] in edge_nodes:
                                     edge_nodes.append(data['Node'][k]['MAC'])
                             elif data['Node'][k]['Message'][last_message[k]]['Content'] == "HLMAC added":
-                                table_text[node_index[k]][0].undraw()
-                                table_text[node_index[k]][0] = Text(table_text[node_index[k]][0].getAnchor(), data['Node'][k]['Message'][last_message[k]]['Value'])
-                                table_text[node_index[k]][0].draw(win)
+                                #dictionary[data['Node'][k]['MAC']]["HLMAC"].undraw()
+                                dictionary[data['Node'][k]['MAC']]["HLMAC"].setText(data['Node'][k]['Message'][last_message[k]]['Value'])
+                                #dictionary[data['Node'][k]['MAC']]["HLMAC"].draw(win)
                         last_message[k] += 1
                 key = win.getKey()
                 while key != "n":
@@ -323,7 +338,7 @@ def main():
                             if data['Node'][k]['MAC'] != data['Node'][k]['Message'][aux_last_message[k]]['Origin'] and data['Node'][k]['Message'][aux_last_message[k]]['Type'] == 'SetHLMAC' and len(data['Node'][k]['Message'][aux_last_message[k]]['Content']['Prefix']) == prefix:
                                 sethlmac_done = 0
                                 assigned_nodes.append(data['Node'][k]['MAC'])
-                                arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']][0], dictionary[data['Node'][k]['MAC']][0], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
+                                arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']]["Circle"], dictionary[data['Node'][k]['MAC']]["Circle"], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
                                 arrow[len(arrow)-1].draw(win)
                                 arrow_message.append(arrow_text(arrow[len(arrow)-1], data['Node'][k]['Message'][aux_last_message[k]], data['Node'][k]['MAC']))
                                 arrow_message[len(arrow)-1].draw(win)
@@ -333,12 +348,9 @@ def main():
                                     if not data['Node'][k]['MAC'] in edge_nodes:
                                         edge_nodes.append(data['Node'][k]['MAC'])
                                 elif data['Node'][k]['Message'][aux_last_message[k]]['Content'] == "HLMAC added" and data['Node'][k]['MAC'] in assigned_nodes:
-                                    print(k)
-                                    print(node_index[k])
-                                    print(table_text[node_index[k]][0])
-                                    table_text[node_index[k]][0].undraw()
-                                    table_text[node_index[k]][0] = Text(table_text[node_index[k]][0].getAnchor(), data['Node'][k]['Message'][aux_last_message[k]]['Value'])
-                                    table_text[node_index[k]][0].draw(win)
+                                    #table_text[node_index[k]][0].undraw()
+                                    dictionary[data['Node'][k]['MAC']]["HLMAC"].setText(data['Node'][k]['Message'][aux_last_message[k]]['Value'])
+                                    #table_text[node_index[k]][0].draw(win)
                             aux_last_message[k] += 1
                     if sethlmac_done == 0:
                         key = win.getKey()
@@ -364,22 +376,22 @@ def main():
                                 load_done = 0
                                 if not data['Node'][k]['MAC'] in load_nodes_prev and not data['Node'][k]['MAC'] in load_nodes_next and aux_last_message[k]+1 < len(data['Node'][k]['Message']) and data['Node'][k]['MAC'] == data['Node'][k]['Message'][aux_last_message[k]+1]['Origin']:
                                     load_nodes_next.append(data['Node'][k]['MAC'])
-                                arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']][0], dictionary[data['Node'][k]['MAC']][0], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
+                                arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']]["Circle"], dictionary[data['Node'][k]['MAC']]["Circle"], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
                                 arrow[len(arrow)-1].draw(win)
                                 arrow_message.append(arrow_text(arrow[len(arrow)-1], data['Node'][k]['Message'][aux_last_message[k]], data['Node'][k]['MAC']))
                                 arrow_message[len(arrow)-1].draw(win)
                             elif data['Node'][k]['MAC'] == data['Node'][k]['Message'][aux_last_message[k]]['Origin'] and data['Node'][k]['Message'][aux_last_message[k]]['Type'] == 'Load' and data['Node'][k]['MAC'] in load_nodes:
-                                table_text[node_index[k]][1].undraw()
-                                table_text[node_index[k]][1] = Text(table_text[node_index[k]][1].getAnchor(), data['Node'][k]['Message'][aux_last_message[k]]['Value'])
-                                table_text[node_index[k]][1].draw(win)
+                                #table_text[node_index[k]][1].undraw()
+                                dictionary[data['Node'][k]['MAC']]["LOAD"].setText(data['Node'][k]['Message'][aux_last_message[k]]['Value'])
+                                #table_text[node_index[k]][1].draw(win)
                             elif data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "INFO":
                                 if data['Node'][k]['Message'][aux_last_message[k]]['Content'] == "Edge":
                                     if not data['Node'][k]['MAC'] in edge_nodes:
                                         edge_nodes.append(data['Node'][k]['MAC'])
                                 elif data['Node'][k]['Message'][aux_last_message[k]]['Content'] == "HLMAC added":
-                                    table_text[node_index[k]][0].undraw()
-                                    table_text[node_index[k]][0] = Text(table_text[node_index[k]][0].getAnchor(), data['Node'][k]['Message'][aux_last_message[k]]['Value'])
-                                    table_text[node_index[k]][0].draw(win)
+                                    #table_text[node_index[k]][0].undraw()
+                                    dictionary[data['Node'][k]['MAC']]["HLMAC"].setText(data['Node'][k]['Message'][aux_last_message[k]]['Value'])
+                                    #table_text[node_index[k]][0].draw(win)
                             aux_last_message[k] += 1
                     load_nodes_prev.extend(load_nodes)
                     load_nodes = load_nodes_next.copy()
@@ -407,22 +419,22 @@ def main():
                                 share_done = 0
                                 if not data['Node'][k]['MAC'] in share_nodes_prev and not data['Node'][k]['MAC'] in share_nodes_next and aux_last_message[k]+1 < len(data['Node'][k]['Message']) and data['Node'][k]['MAC'] == data['Node'][k]['Message'][aux_last_message[k]+1]['Origin']:
                                     share_nodes_next.append(data['Node'][k]['MAC'])
-                                arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']][0], dictionary[data['Node'][k]['MAC']][0], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
+                                arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']]["Circle"], dictionary[data['Node'][k]['MAC']]["Circle"], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
                                 arrow[len(arrow)-1].draw(win)
                                 arrow_message.append(arrow_text(arrow[len(arrow)-1], data['Node'][k]['Message'][aux_last_message[k]], data['Node'][k]['MAC']))
                                 arrow_message[len(arrow)-1].draw(win)
                             elif data['Node'][k]['MAC'] == data['Node'][k]['Message'][aux_last_message[k]]['Origin'] and data['Node'][k]['Message'][aux_last_message[k]]['Type'] == 'Share' and data['Node'][k]['MAC'] in share_nodes:
-                                table_text[node_index[k]][2].undraw()
-                                table_text[node_index[k]][2] = Text(table_text[node_index[k]][2].getAnchor(), data['Node'][k]['Message'][aux_last_message[k]]['Value'])
-                                table_text[node_index[k]][2].draw(win)
+                                #table_text[node_index[k]][2].undraw()
+                                dictionary[data['Node'][k]['MAC']]["SHARE"].setText(data['Node'][k]['Message'][aux_last_message[k]]['Value'])
+                                #table_text[node_index[k]][2].draw(win)
                             elif data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "INFO":
                                 if data['Node'][k]['Message'][aux_last_message[k]]['Content'] == "Edge":
                                     if not data['Node'][k]['MAC'] in edge_nodes:
                                         edge_nodes.append(data['Node'][k]['MAC'])
                                 elif data['Node'][k]['Message'][aux_last_message[k]]['Content'] == "HLMAC added":
-                                    table_text[node_index[k]][0].undraw()
-                                    table_text[node_index[k]][0] = Text(table_text[node_index[k]][0].getAnchor(), data['Node'][k]['Message'][aux_last_message[k]]['Value'])
-                                    table_text[node_index[k]][0].draw(win)
+                                    #table_text[node_index[k]][0].undraw()
+                                    dictionary[data['Node'][k]['MAC']]["LOAD"].setText(data['Node'][k]['Message'][aux_last_message[k]]['Value'])
+                                    #table_text[node_index[k]][0].draw(win)
                                 elif data['Node'][k]['Message'][aux_last_message[k]]['Content'] == "Convergence":
                                     convergence_time = float("{:.2f}".format(float(data['Node'][k]['Message'][aux_last_message[k]]['Value'])/128))
                             aux_last_message[k] += 1
