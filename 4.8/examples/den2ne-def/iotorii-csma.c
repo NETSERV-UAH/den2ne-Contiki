@@ -70,6 +70,7 @@
 #endif
 
 //DELAY DE INFORMACIÓN DE LA CARGA QUE TIENE UN NODO A SUS VECINOS
+#define IOTORII_CONF_LOAD_TIME 10
 #ifdef IOTORII_CONF_LOAD_TIME
 	#define IOTORII_LOAD_TIME IOTORII_CONF_LOAD_TIME
 #else
@@ -692,8 +693,25 @@ void iotorii_handle_load_timer ()
 		packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
 		
 		memcpy(packetbuf_dataptr(), &(node->load), sizeof(node->load)); //SE COPIA LOAD  
-		packetbuf_set_datalen(sizeof(node->load));									
-		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+		packetbuf_set_datalen(sizeof(node->load));						
+		// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+
+		neighbour_table_entry_t *nb;
+		nb = list_head(neighbour_table_entry_list);
+		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+		{
+			if (nb->flag == 1)
+			{			
+				packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
+
+				for(int i = 0; i < LINKADDR_SIZE; i++) {
+					if(i > 0 && i % 2 == 0) {
+						printf(".");
+					}
+					printf("%02x", nb->addr.u8[i]);
+				}
+			}	
+		}
 
 		send_packet(NULL, NULL);
 
@@ -748,7 +766,24 @@ void iotorii_handle_share_upstream_timer ()
 			printf("//INFO HANDLE SHARE UP// Carga informada: %d\r\n", extra_load);
 			memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
 			packetbuf_set_datalen(sizeof(extra_load));									
-			packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+			// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+
+			neighbour_table_entry_t *nb;
+			nb = list_head(neighbour_table_entry_list);
+			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+			{
+				if (nb->flag == 1)
+				{			
+					packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
+
+					for(int i = 0; i < LINKADDR_SIZE; i++) {
+						if(i > 0 && i % 2 == 0) {
+							printf(".");
+						}
+						printf("%02x", nb->addr.u8[i]);
+					}
+				}	
+			}
 		}	
 	}
 	
@@ -797,9 +832,9 @@ static void iotorii_handle_statistic_timer ()
 
 			//ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME) * CLOCK_SECOND, iotorii_handle_load_timer, NULL);
 			
-			#if IOTORII_NODE_TYPE > 1
-				iotorii_handle_load_timer();
-			#endif
+			// #if IOTORII_NODE_TYPE > 1
+			// 	iotorii_handle_load_timer();
+			// #endif
 		}
 		else
 		{
@@ -844,7 +879,10 @@ static void iotorii_handle_statistic_timer ()
 		#if IOTORII_NODE_TYPE > 1
 			if (edge == 1) //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
 				//ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);
+				iotorii_handle_load_timer();
 				iotorii_handle_share_upstream_timer();
+				// ctimer_set(&load_timer, 4 * (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
+				// ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME) + 4*IOTORII_LOAD_TIME, iotorii_handle_share_upstream_timer, NULL);
 		#endif
 	}
 }
@@ -1169,8 +1207,8 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 
 	//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 	clock_time_t sethlmac_delay_time = 0;
-	sethlmac_delay_time = 5 * (IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 128));
-	//ctimer_set(&statistic_timer, sethlmac_delay_time, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	sethlmac_delay_time = 6 * (IOTORII_SETHLMAC_DELAY * (CLOCK_SECOND / 1000));
+	ctimer_set(&statistic_timer, sethlmac_delay_time, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 }
 
 
@@ -1292,6 +1330,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				{
 					memcpy(&nb->load, packetbuf_dataptr(), packetbuf_data_len); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
 					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\r\n", *p_load, str_sender);
+
+					printf("Hijos LOAD: %d    Flag: %d\n\r", n_hijos_load, nb->flag);
 
 					if (nb->flag == 0 && edge == 0 && n_hijos_load != 0)
 					{
@@ -1476,13 +1516,13 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 void iotorii_operation (void)
 {
 	printf("Longitud: %d\n\r", packetbuf_datalen());
-	if (packetbuf_holds_broadcast())
-	{
+	// if (packetbuf_holds_broadcast())
+	// {
 		if (packetbuf_datalen() == 0) //SI LA LONGITUD ES NULA, SE HA RECIBIDO UN PAQUETE HELLO
 			iotorii_handle_incoming_hello(); //SE PROCESA PAQUETE HELLO
 		else //SI NO ES NULA, SE HA RECIBIDO UN PAQUETE SETHLMAC
 			iotorii_handle_incoming_sethlmac_or_load(); //SE PROCESA PAQUETE SETHLMAC
-	}
+	// }
 }
 
 
