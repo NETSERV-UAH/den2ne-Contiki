@@ -29,6 +29,9 @@ void hlmac_table_init (void);
 //AÑADE UNA DIRECCIÓN HLMAC AL FINAL DE LA TABLA
 uint8_t hlmactable_add (const hlmacaddr_t addr, uint64_t timestamp);
 
+//ELIMINA TODAS LAS DIRECCIONES HLMAC DE LA TABLA
+uint8_t hlmactable_clean (void);
+
 //ELIMINA LA DIRECCIÓN HLMAC AL FINAL DE LA TABLA
 uint8_t hlmactable_chop (void);
 

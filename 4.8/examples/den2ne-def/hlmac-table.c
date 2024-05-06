@@ -36,13 +36,11 @@ uint8_t hlmactable_add (const hlmacaddr_t addr, uint64_t timestamp)
 
 	if (number_of_hlmac_addresses>0) //COMPRUEBA SI HAY UNA ENTRADA PARA COMPROBAR QUÉ TIMESTAMP ES MÁS RECIENTE
 	{
-		hlmac_table_entry_t* entry = list_tail (hlmac_table_entry_list);
+		hlmac_table_entry_t* entry = list_head (hlmac_table_entry_list);
 		if (timestamp > entry->timestamp)
-			hlmactable_chop();
+			hlmactable_clean(); //ELIMINA TODA LA TABLA
 		//else if (timestamp == entry->timestamp) //SI ES IGUAL SE RETRANSMITE (CREA BUCLES)
 		//	return 1;
-		else
-			return 0;
 
 	}
 
@@ -86,9 +84,22 @@ uint8_t hlmactable_add (const hlmacaddr_t addr, uint64_t timestamp)
 	}
 }
 
+uint8_t hlmactable_clean (void)
+{
+	hlmac_table_entry_t* entry = list_head (hlmac_table_entry_list), *entry_remove = list_head (hlmac_table_entry_list);
+	while(entry != NULL){
+		entry = entry->next;
+		free(entry_remove);
+		entry_remove = entry;
+	}
+	*hlmac_table_entry_list = NULL;
+	number_of_hlmac_addresses = 0;
+	return 1;
+}
+
 uint8_t hlmactable_chop (void)
 {
-	list_chop (hlmac_table_entry_list);
+	free(list_chop (hlmac_table_entry_list));
 	number_of_hlmac_addresses--; //SE DISMINUYE LA VARIABLE
 	return 1;
 }
