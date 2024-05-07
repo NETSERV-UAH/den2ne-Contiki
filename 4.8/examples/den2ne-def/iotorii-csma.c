@@ -50,39 +50,36 @@
 #ifdef IOTORII_CONF_SETHLMAC_START_TIME
 	#define IOTORII_SETHLMAC_START_TIME IOTORII_CONF_SETHLMAC_START_TIME
 #else
-	#define IOTORII_SETHLMAC_START_TIME 5 //Default Delay is 1 s
+	#define IOTORII_SETHLMAC_START_TIME 2 //Default Delay is 1 s
 #endif
 
 //DELAY DESDE QUE SE INICIALIZA UN NODO COMÚN HASTA QUE SE ENVÍA MENSAJE SETHLMAC A LOS VECINOS
 //RANGO = [IOTORII_CONF_SETHLMAC_DELAY/2 IOTORII_CONF_SETHLMAC_DELAY]
-#define IOTORII_CONF_SETHLMAC_DELAY 10
 #ifdef IOTORII_CONF_SETHLMAC_DELAY
 	#define IOTORII_SETHLMAC_DELAY IOTORII_CONF_SETHLMAC_DELAY
 #else
-	#define IOTORII_SETHLMAC_DELAY 10
+	#define IOTORII_SETHLMAC_DELAY 15
 #endif
 
 //DELAY DE PRIMERAS STADÍSTICAS
 #ifdef IOTORII_CONF_STATISTICS_TIME
 	#define IOTORII_STATISTICS_TIME IOTORII_CONF_STATISTICS_TIME
 #else
-	#define IOTORII_STATISTICS_TIME 5
+	#define IOTORII_STATISTICS_TIME 20
 #endif
 
 //DELAY DE INFORMACIÓN DE LA CARGA QUE TIENE UN NODO A SUS VECINOS
-#define IOTORII_CONF_LOAD_TIME 10
 #ifdef IOTORII_CONF_LOAD_TIME
 	#define IOTORII_LOAD_TIME IOTORII_CONF_LOAD_TIME
 #else
-	#define IOTORII_LOAD_TIME 10
+	#define IOTORII_LOAD_TIME 25
 #endif
 
 //DELAY DE TRASPASOS DE CARGAS
-#define IOTORII_CONF_SHARE_TIME 1
 #ifdef IOTORII_CONF_SHARE_TIME
 	#define IOTORII_SHARE_TIME IOTORII_CONF_SHARE_TIME
 #else
-	#define IOTORII_SHARE_TIME 10 //1 POR DEFECTO -> AUMENTAR EN CASO DE MAS DE 30 NODOS
+	#define IOTORII_SHARE_TIME 25 //1 POR DEFECTO -> AUMENTAR EN CASO DE MAS DE 30 NODOS
 #endif
 
 //NÚMERO DE HELLOS HASTA QUE SE BORRE A ESE VECINO
@@ -246,12 +243,12 @@ static int max_payload (void)
 	#define UDP_PORT_LISTEN	8765
 	#define UDP_PORT_SEND	5678
 	static struct simple_udp_connection udp_conn;
-	uip_ipaddr_t dest_ipaddr;
+	addr_t dest_ipaddr;
 	static void
 	udp_rx_callback(struct simple_udp_connection *c,
-			const uip_ipaddr_t *sender_addr,
+			const addr_t *sender_addr,
 			uint16_t sender_port,
-			const uip_ipaddr_t *receiver_addr,
+			const addr_t *receiver_addr,
 			uint16_t receiver_port,
 			const uint8_t *data,
 			uint16_t datalen){
@@ -268,7 +265,7 @@ static int max_payload (void)
 	void read_log(){
 		int mem_used, code;
 		int aux_log, len_log;
-		linkaddr_t addr_log;
+		addr_t addr_log;
 
 		printf("\n\r\t{\n\r" \
 			"\t\t\"MAC\"      :\t\"");
@@ -590,7 +587,7 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 	
 	uint8_t *packetbuf_ptr = packetbuf_ptr_head; //PUNTERO A COPIA DEL BUFFER
 	
-	linkaddr_t link_address = linkaddr_null;
+	addr_t link_address = linkaddr_null;
 
 	int datalen_counter = 0;
 	uint8_t id = 0;
@@ -865,11 +862,10 @@ static void iotorii_handle_statistic_timer ()
 		
 		#if IOTORII_NODE_TYPE > 1
 			if (edge == 1){ //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
-				//ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);
-				iotorii_handle_load_timer();
-				iotorii_handle_share_upstream_timer();
-				// ctimer_set(&load_timer, 4 * (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
-				// ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME), iotorii_handle_share_upstream_timer, NULL);
+				// iotorii_handle_load_timer();
+				// iotorii_handle_share_upstream_timer();
+				ctimer_set(&load_timer,  (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
+				ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME) + IOTORII_LOAD_TIME, iotorii_handle_share_upstream_timer, NULL);
 			}
 		#endif
 	}
@@ -931,7 +927,7 @@ static void iotorii_handle_hello_timer ()
 
 	#if IOTORII_NODE_TYPE == 1 //ROOT
 		//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT
-		ctimer_set(&sethlmac_timer, IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND, iotorii_handle_sethlmac_timer, NULL);
+		ctimer_set(&sethlmac_timer, (random_rand() % IOTORII_SETHLMAC_START_TIME) + (IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND), iotorii_handle_sethlmac_timer, NULL);
 	#endif
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 	
@@ -992,7 +988,7 @@ void iotorii_handle_send_sethlmac_timer ()
 }
 
 
-void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, uint32_t timestamp)
+void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32_t timestamp)
 {
 	int mac_max_payload = max_payload();
 	
@@ -1141,8 +1137,8 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 					clock_time_t sethlmac_delay_time = 0; //EL DELAY ANTES DE ENVIAR EL PRIMER MENSAJE SETHLMAC (ENVIADO POR ROOT) ES 0
 					
 					#if IOTORII_NODE_TYPE > 1 //SI NODO COMÚN SE PLANIFICAN DELAYS ANTES DE ENVIAR LOS DEMÁS MENSAJES SETHLMAC
-						sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 1000);
-						//sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
+						sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2; //* (CLOCK_SECOND / 1000);
+						sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
 						
 						#if LOG_DBG_DEVELOPER == 1
 							LOG_DBG("Scheduling a SetHLMAC message by the root node after %u ticks in the future\r\n", (unsigned)sethlmac_delay_time);
@@ -1194,16 +1190,16 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, linkaddr_t sender_link_address, ui
 	#endif
 
 	//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
-	clock_time_t sethlmac_delay_time = 0;
-	sethlmac_delay_time = 10 * (IOTORII_SETHLMAC_DELAY * (CLOCK_SECOND / 1000));
-	ctimer_set(&statistic_timer, sethlmac_delay_time, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	// clock_time_t sethlmac_delay_time = 0;
+	// sethlmac_delay_time = (IOTORII_SETHLMAC_DELAY * (CLOCK_SECOND / 1000));
+	ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * (CLOCK_SECOND / 50), iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 }
 
 
 
 void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 {
-	const linkaddr_t *sender_addr = packetbuf_addr(PACKETBUF_ADDR_SENDER); //SE LEE EL BUFFER
+	const addr_t *sender_addr = packetbuf_addr(PACKETBUF_ADDR_SENDER); //SE LEE EL BUFFER
 
 	#if IOTORII_NRF52840_LOG == 1
 		if(check_write()){
@@ -1289,8 +1285,17 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 	received_hlmac_addr = iotorii_extract_address(); //SE COGE LA DIRECCIÓN RECIBIDA
 	uint32_t timestamp = iotorii_extract_timestamp(); //SE COGE EL TIMESTAMP RECIBIDA
 	
-	linkaddr_t sender_link_address = *packetbuf_addr(PACKETBUF_ADDR_SENDER);
-	const linkaddr_t *sender = &sender_link_address;
+	addr_t sender_link_address = *packetbuf_addr(PACKETBUF_ADDR_SENDER);
+	const addr_t *sender = &sender_link_address;
+
+				printf("Mensaje de: ");
+				for(int i = 0; i < LINKADDR_SIZE; i++) {
+					if(i > 0 && i % 2 == 0) {
+						printf(".");
+					}
+					printf("%02x", sender_link_address.u8[i]);
+				}
+				printf("\n\r");
 	
 	neighbour_table_entry_t *nb;
 	this_node_t *node;
@@ -1343,8 +1348,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						n_hijos_load--;
 					}
 					if(!edge && sent_load == 0 && n_hijos_load == 0){
-						//ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME) * CLOCK_SECOND, iotorii_handle_load_timer, NULL);
-						iotorii_handle_load_timer();
+						ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
+						// iotorii_handle_load_timer();
 						sent_load = 1;
 					}
 				}
@@ -1390,7 +1395,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						{
 							#if IOTORII_NODE_TYPE == 1 //SI LLEGA AL ROOT HA TERMINADO EL INTERCAMBIO DE DATOS
 								convergence_time = clock_time() - convergence_time;
-								printf("Ciclos hasta convergencia: %d\n\rciclos por segundo: %d\n\r", convergence_time, CLOCK_SECOND);
+								printf("Ciclos hasta convergencia: %d (ms en simulacion)\n\rciclos por segundo: %d\n\r", convergence_time, CLOCK_SECOND);
 								printf("FIN CONVERGENCIA\r\n");
 
 								#if IOTORII_NRF52840_LOG == 1
@@ -1403,8 +1408,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 									update_mem_counter();
 								#endif
 							#else //SI NO ES ROOT ENVIA SU SHARE
-								//ctimer_set(&share_timer, IOTORII_SHARE_TIME * CLOCK_SECOND, iotorii_handle_share_upstream_timer, NULL);	
-								iotorii_handle_share_upstream_timer();
+								ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME), iotorii_handle_share_upstream_timer, NULL);	
+								// iotorii_handle_share_upstream_timer();
 								//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
 							#endif
 						}						
@@ -1571,9 +1576,9 @@ static void iotorii_handle_sethlmac_timer ()
 	#if LOG_DBG_STATISTIC == 1
 		//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL);
 		clock_time_t sethlmac_delay_time = 0;
-		sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 128);
+		sethlmac_delay_time = IOTORII_STATISTICS_TIME/2 * (CLOCK_SECOND / 128);
 		sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
-		ctimer_set(&statistic_timer, IOTORII_SETHLMAC_DELAY, iotorii_handle_statistic_timer, NULL);
+		ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME, iotorii_handle_statistic_timer, NULL);
 	#endif
 	
 	timestamp++;
@@ -1728,7 +1733,7 @@ static void input_packet (void) //SE RECIBE UN PAQUETE
 	max_payload,
 };
 
-char *link_addr_to_str (const linkaddr_t addr, int length)
+char *link_addr_to_str (const addr_t addr, int length)
 {
 	char *address = (char*) malloc (sizeof(char) * (length * (2 + 1) + 1)); //SE AÑADE ESPACIO PARA LOS . Y PARA '\0'
 	char *s = (char *)address;

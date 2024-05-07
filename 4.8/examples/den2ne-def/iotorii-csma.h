@@ -21,7 +21,7 @@
 #ifdef IOTORII_CONF_IPV6
 	#define IOTORII_IPV6 IOTORII_CONF_IPV6
 #else
-	#define IOTORII_IPV6 1 //To use (1) or not (0) IPv6
+	#define IOTORII_IPV6 0 //To use (1) or not (0) IPv6
 #endif
 
 //#if IOTORII_IPV6 == 1 
@@ -69,10 +69,16 @@
 
 /*---------------------------------------------------------------------------*/
 
+#if IOTORII_IPV6 == 1 
+	#define addr_t uip_ipaddr_t
+#else
+	#define addr_t linkaddr_t
+#endif
+
 struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA
 {
 	struct neighbour_table_entry *next;
-	linkaddr_t addr;
+	addr_t addr;
 	uint16_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
 	uint8_t number_id;
 	int flag; //FLAG PADRE/HIJO OUTPUT/INPUT
@@ -82,18 +88,18 @@ struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA
 
 typedef struct neighbour_table_entry neighbour_table_entry_t;
 
-struct neighbour_table_entry_ipv6 //ESTRUCTURA DE ENTRADA DE TABLA
-{
-       struct neighbour_table_entry_ipv6 *next;
-       uip_ipaddr_t addr;
-	   uint16_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
-       uint8_t number_id;
-       int flag; //FLAG PADRE/HIJO OUTPUT/INPUT
-       int load; //CARGA DE CADA NODO
-       short in_out; //PUERTOS DE CARGA IN/OUT
-};
+// struct neighbour_table_entry_ipv6 //ESTRUCTURA DE ENTRADA DE TABLA
+// {
+//        struct neighbour_table_entry_ipv6 *next;
+//        uip_ipaddr_t addr;
+// 	   uint16_t last_hello; //NÚMERO DE HELLOS ENVIADOS AL RECIBIR EL ÚLTIMO HELLO DE ESTE VECINO
+//        uint8_t number_id;
+//        int flag; //FLAG PADRE/HIJO OUTPUT/INPUT
+//        int load; //CARGA DE CADA NODO
+//        short in_out; //PUERTOS DE CARGA IN/OUT
+// };
 
-typedef struct neighbour_table_entry_ipv6 neighbour_table_entry_t_ipv6;
+// typedef struct neighbour_table_entry_ipv6 neighbour_table_entry_t_ipv6;
 
 /* just a default - with LLSEC, etc */
 #define CSMA_MAC_MAX_HEADER 21
