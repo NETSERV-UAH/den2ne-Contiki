@@ -108,6 +108,7 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 
 	#if LOG_DBG_STATISTIC == 1
 		uint16_t number_of_sethlmac_messages = 0;
+		uint16_t number_times_converged = 0;
 	#endif
 
 #endif
@@ -691,7 +692,7 @@ void iotorii_handle_load_timer ()
 		packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
 		
 		memcpy(packetbuf_dataptr(), &(node->load), sizeof(node->load)); //SE COPIA LOAD  
-		packetbuf_set_datalen(sizeof(node->load));						
+		packetbuf_set_datalen(sizeof(node->load));
 		// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 
 		neighbour_table_entry_t *nb;
@@ -862,10 +863,10 @@ static void iotorii_handle_statistic_timer ()
 		
 		#if IOTORII_NODE_TYPE > 1
 			if (edge == 1){ //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
-				// iotorii_handle_load_timer();
-				// iotorii_handle_share_upstream_timer();
-				ctimer_set(&load_timer,  (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
-				ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME) + IOTORII_LOAD_TIME, iotorii_handle_share_upstream_timer, NULL);
+				iotorii_handle_load_timer();
+				iotorii_handle_share_upstream_timer();
+				// ctimer_set(&load_timer,  (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
+				// ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME) + IOTORII_LOAD_TIME, iotorii_handle_share_upstream_timer, NULL);
 			}
 		#endif
 	}
@@ -1137,9 +1138,10 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 					clock_time_t sethlmac_delay_time = 0; //EL DELAY ANTES DE ENVIAR EL PRIMER MENSAJE SETHLMAC (ENVIADO POR ROOT) ES 0
 					
 					#if IOTORII_NODE_TYPE > 1 //SI NODO COMÚN SE PLANIFICAN DELAYS ANTES DE ENVIAR LOS DEMÁS MENSAJES SETHLMAC
-						sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2; //* (CLOCK_SECOND / 1000);
-						sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
-						
+						// sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2; //* (CLOCK_SECOND / 1000);
+						// sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
+						sethlmac_delay_time = (random_rand() % (IOTORII_SETHLMAC_DELAY/2));
+
 						#if LOG_DBG_DEVELOPER == 1
 							LOG_DBG("Scheduling a SetHLMAC message by the root node after %u ticks in the future\r\n", (unsigned)sethlmac_delay_time);
 						#endif
@@ -1192,7 +1194,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 	//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 	// clock_time_t sethlmac_delay_time = 0;
 	// sethlmac_delay_time = (IOTORII_SETHLMAC_DELAY * (CLOCK_SECOND / 1000));
-	ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * (CLOCK_SECOND / 50), iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	ctimer_set(&statistic_timer, max_transmission_delay()+1, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 }
 
 
@@ -1348,8 +1350,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						n_hijos_load--;
 					}
 					if(!edge && sent_load == 0 && n_hijos_load == 0){
-						ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
-						// iotorii_handle_load_timer();
+						// ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
+						iotorii_handle_load_timer();
 						sent_load = 1;
 					}
 				}
@@ -1395,7 +1397,10 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						{
 							#if IOTORII_NODE_TYPE == 1 //SI LLEGA AL ROOT HA TERMINADO EL INTERCAMBIO DE DATOS
 								convergence_time = clock_time() - convergence_time;
-								printf("Ciclos hasta convergencia: %d (ms en simulacion)\n\rciclos por segundo: %d\n\r", convergence_time, CLOCK_SECOND);
+								number_times_converged++;
+								printf("Ciclos hasta convergencia: %d (ms en simulacion)\n\r", convergence_time);
+								printf("Ciclos por segundo: %d\n\r", CLOCK_SECOND);
+								printf("Ha realizado un total de %d asignaciones y ha convergido %d veces (%d%%)\n\r", number_of_sethlmac_messages, number_times_converged, (number_times_converged * 100)/number_of_sethlmac_messages);
 								printf("FIN CONVERGENCIA\r\n");
 
 								#if IOTORII_NRF52840_LOG == 1
@@ -1408,8 +1413,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 									update_mem_counter();
 								#endif
 							#else //SI NO ES ROOT ENVIA SU SHARE
-								ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME), iotorii_handle_share_upstream_timer, NULL);	
-								// iotorii_handle_share_upstream_timer();
+								// ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME), iotorii_handle_share_upstream_timer, NULL);	
+								iotorii_handle_share_upstream_timer();
 								//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS		
 							#endif
 						}						
@@ -1520,9 +1525,9 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 		}
 	}
 	
-	#if LOG_DBG_STATISTIC == 1
-		printf("Periodic Statistics: node_id: %u, convergence_time_end\r\n", node_id);
-	#endif
+	// #if LOG_DBG_STATISTIC == 1
+	// 	printf("Periodic Statistics: node_id: %u, convergence_time_end\r\n", node_id);
+	// #endif
 }
 
 
@@ -1564,9 +1569,9 @@ static void iotorii_handle_sethlmac_timer ()
 		update_mem_counter();
 	#endif
 	
-	#if LOG_DBG_STATISTIC == 1
-		printf("Periodic Statistics: node_id: %u, convergence_time_start\r\n", node_id);
-	#endif
+	// #if LOG_DBG_STATISTIC == 1
+	// 	printf("Periodic Statistics: node_id: %u, convergence_time_start\r\n", node_id);
+	// #endif
 	
 	iotorii_send_sethlmac(root_addr, linkaddr_node_addr, timestamp);
 	free(root_addr.address);
@@ -1619,7 +1624,7 @@ static void init (void)
 		#endif
 
 		//SE PLANIFICA MENSAJE HELLO
-		hello_start_time = 4*hello_start_time / 5 + (random_rand() % (hello_start_time / 5));
+		hello_start_time = (hello_start_time - IOTORII_HELLO_START_TIME) + (random_rand() % (IOTORII_HELLO_START_TIME * 2));
 		LOG_DBG("Scheduling a Hello message after %u ticks in the future\r\n", (unsigned)hello_start_time);
 		ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
 

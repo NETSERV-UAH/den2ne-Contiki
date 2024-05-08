@@ -265,7 +265,7 @@ static void schedule_transmission (struct neighbor_queue *n) //ASIGNA DELAYS PAR
 	backoff_exponent = MIN(n->collisions + CSMA_MIN_BE, CSMA_MAX_BE);
 
 	delay = ((1 << backoff_exponent) - 1) * backoff_period(); //MAX DELAY POSIBLE PARA IEEE 802.15.4: 2^BE-1 backoff periods
-	
+
 	if (delay > 0) 
 		delay = random_rand() % delay; //SE DETERMINA EL DELAY PARA LA SIGUIENTE TX
 
@@ -524,4 +524,8 @@ void csma_output_init (void) //SE INICIALIZAN LAS ENTRADAS DE UN VECINO DETERMIN
 	memb_init(&packet_memb);
 	memb_init(&metadata_memb);
 	memb_init(&neighbor_memb);
+}
+
+clock_time_t max_transmission_delay (void){
+	return ((1 << CSMA_MAX_BE) - 1) * backoff_period();
 }
