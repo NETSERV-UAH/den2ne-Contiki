@@ -40,6 +40,12 @@
 	#define IOTORII_NODE_TYPE 1 //To support the traditional MAC operation
 #endif
 
+#ifdef IOTORII_CONF_HLMAC_CAST
+	#define IOTORII_HLMAC_CAST IOTORII_CONF_HLMAC_CAST
+#else
+	#define IOTORII_HLMAC_CAST 0 //To send HLMACS through broadcast (1) or unicast (0)
+#endif
+
 #ifdef CSMA_CONF_SEND_SOFT_ACK
 	#define CSMA_SEND_SOFT_ACK CSMA_CONF_SEND_SOFT_ACK
 #else /* CSMA_CONF_SEND_SOFT_ACK */

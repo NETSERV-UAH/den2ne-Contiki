@@ -125,6 +125,9 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 		struct payload_entry *next;
 		uint8_t *payload;
 		int data_len;
+		#if IOTORII_HLMAC_CAST == 0
+			linkaddr_t dest;
+		#endif
 	};
 
 	typedef struct payload_entry payload_entry_t;
@@ -700,7 +703,7 @@ void iotorii_handle_load_timer ()
 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
 		{
 			if (nb->flag == 1)
-			{			
+			{
 				packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
 			}	
 		}
@@ -863,8 +866,8 @@ static void iotorii_handle_statistic_timer ()
 		
 		#if IOTORII_NODE_TYPE > 1
 			if (edge == 1){ //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
-				iotorii_handle_load_timer();
-				iotorii_handle_share_upstream_timer();
+				// iotorii_handle_load_timer();
+				// iotorii_handle_share_upstream_timer();
 				// ctimer_set(&load_timer,  (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
 				// ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME) + IOTORII_LOAD_TIME, iotorii_handle_share_upstream_timer, NULL);
 			}
@@ -958,7 +961,11 @@ void iotorii_handle_send_sethlmac_timer ()
 		packetbuf_set_datalen(payload_entry->data_len);
 
 		//Control info: the destination address, the broadcast address, is tagged to the outbound packet
-		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+		#if IOTORII_HLMAC_CAST == 1
+			packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+		#else
+			packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(payload_entry->dest));
+		#endif
 		LOG_DBG("Queue: SetHLMAC prepared to send\r\n");
 		
 		send_packet(NULL, NULL);
@@ -974,7 +981,7 @@ void iotorii_handle_send_sethlmac_timer ()
 		if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
 		{
 			//SE PLANIFICA EL SIGUIENTE MENSAJE
-			clock_time_t sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 1000);
+			// clock_time_t sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 1000);
 			//sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
 			
 			#if LOG_DBG_DEVELOPER == 1
@@ -983,7 +990,7 @@ void iotorii_handle_send_sethlmac_timer ()
 						
 			// ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL);
 			//iotorii_handle_send_sethlmac_timer();
-			ctimer_set(&send_sethlmac_timer, 1, iotorii_handle_send_sethlmac_timer, NULL);
+			ctimer_set(&send_sethlmac_timer, max_transmission_delay()+1, iotorii_handle_send_sethlmac_timer, NULL);
 		}
 	}
 }
@@ -1063,9 +1070,13 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 			//SI EL NODO TIENE VECINOS PARA ENVIAR MENSAJE SETHLMAC Y EL PAYLOAD ES MEÑOR AL MÁXIMO PAYLOAD
 			if (random_list[i-1] && (mac_max_payload >= (addr.len + 2 + LINKADDR_SIZE))) //2 = LONGITUD DEL PREFIJO DE DIRECCIÓN HLMAC(1) + ID(1)
 			{
+				#if IOTORII_HLMAC_CAST == 0
+				do
+				{
+				#endif
 				//SE CREA UNA COPIA DE PACKETBUF ANTES DE EMPEZAR EL PROCESO PARA QUE NO SE SOBREESCRIBA AL ENVIAR MENSAJES SETHLMAC
 				packetbuf_ptr_head = (uint8_t *) malloc (sizeof(uint8_t) * mac_max_payload);
-				packetbuf_ptr = packetbuf_ptr_head; 
+				packetbuf_ptr = packetbuf_ptr_head;
 				
 				/* The payload structure:
 				* +-----------+------------+--------+-----+------+-----+-----+------+
@@ -1075,7 +1086,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 				memcpy(packetbuf_ptr, &timestamp, sizeof(uint32_t)); //COPIA TIMESTAMP
 				
 				packetbuf_ptr+=sizeof(uint32_t);
-				datalen_counter+=sizeof(uint32_t);
+				datalen_counter=sizeof(uint32_t);
 				
 				memcpy(packetbuf_ptr, &(addr.len), 1); //COPIA LONGITUD PREFIJO DE VECINO
 				
@@ -1087,8 +1098,10 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 				packetbuf_ptr += addr.len;
 				datalen_counter += addr.len;
 
+				#if IOTORII_HLMAC_CAST == 1
 				do
 				{
+				#endif
 					memcpy(packetbuf_ptr, &(random_list[i-1]->number_id), 1); //COPIA ID DE VECINO
 					
 					packetbuf_ptr++;
@@ -1100,30 +1113,8 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 					datalen_counter += LINKADDR_SIZE;
 
 					i++;
+				#if IOTORII_HLMAC_CAST == 1
 				} while (mac_max_payload >= (datalen_counter + LINKADDR_SIZE + 1) && i <= number_of_neighbours_new);
-				
-
-				#if IOTORII_NRF52840_LOG == 1
-					if(check_write()){
-						int c=1;
-						memcpy(nvmc+0x504, &write, 4);
-						write_log(0xFFFF3333);
-						write_log(timestamp);
-						write_log(addr.len);
-						for(int k = 0; k < addr.len; k++){
-							write_log(addr.address[k]);
-						}
-						write_log(i);
-						do
-						{
-							memcpy(log+mem_counter, &(random_list[c-1]->addr), sizeof(random_list[c-1]->addr));
-							mem_counter = mem_counter + sizeof(random_list[c-1]->addr);
-							write_log(random_list[c-1]->number_id);
-							c++;
-						} while (c < i);
-						memcpy(nvmc+0x504, &read, 4);
-					}
-					update_mem_counter();
 				#endif
 
 				//SE CREA Y SE ASIGNAN VALORES A LA ENTRADA DE PAYLOAD
@@ -1131,6 +1122,17 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 				payload_entry->next = NULL;
 				payload_entry->payload = packetbuf_ptr_head;
 				payload_entry->data_len = datalen_counter;
+				#if IOTORII_HLMAC_CAST == 0
+					payload_entry->dest = random_list[i-2]->addr;
+					printf("Destino: ");
+					for(int c = 0; c < LINKADDR_SIZE; c++) {
+						if(c > 0 && c % 2 == 0) {
+							printf(".");
+						}
+						printf("%02x", payload_entry->dest.u8[c]);
+					}
+					printf("\n\r");
+				#endif
 
 				
 				if (!list_head(payload_entry_list)) //ANTES DE AÑADIR LA ENTRADA DE PAYLOAD A LA LISTA SE COMPRUEBA SI LA LISTA ESTA VACÍA PARA CONFIGURAR EL TIEMPO
@@ -1155,13 +1157,47 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 				else //SI NO ESTÁ VACÍA NO SE CONFIGURA EL TIEMPO Y DIRECTAMENTE SE AÑADE LA ENTRADA DE PAYLOAD
 					list_add(payload_entry_list, payload_entry);
 				
+
+				#if IOTORII_HLMAC_CAST == 0
+				if (i==2)
+				#endif
 				list_this_node_entry (payload_entry, &addr); //RELLENA LA ESTRUCTURA	
+				
+
+				#if IOTORII_HLMAC_CAST == 0
+				} while (mac_max_payload >= (datalen_counter + LINKADDR_SIZE + 1) && i <= number_of_neighbours_new);
+				#endif
+
 				
 
 				char *neighbour_hlmac_addr_str = hlmac_addr_to_str(addr);
 				printf("SetHLMAC prefix (addr:%s) added to queue to advertise to %d nodes.\r\n", neighbour_hlmac_addr_str, i-1);
 				LOG_DBG("SetHLMAC prefix (addr:%s) added to queue to advertise to %d nodes.\r\n", neighbour_hlmac_addr_str, i-1);
 				free(neighbour_hlmac_addr_str);
+
+
+				#if IOTORII_NRF52840_LOG == 1
+					if(check_write()){
+						int c=1;
+						memcpy(nvmc+0x504, &write, 4);
+						write_log(0xFFFF3333);
+						write_log(timestamp);
+						write_log(addr.len);
+						for(int k = 0; k < addr.len; k++){
+							write_log(addr.address[k]);
+						}
+						write_log(i);
+						do
+						{
+							memcpy(log+mem_counter, &(random_list[c-1]->addr), sizeof(random_list[c-1]->addr));
+							mem_counter = mem_counter + sizeof(random_list[c-1]->addr);
+							write_log(random_list[c-1]->number_id);
+							c++;
+						} while (c < i);
+						memcpy(nvmc+0x504, &read, 4);
+					}
+					update_mem_counter();
+				#endif
 			}			
 			else //SI EL NODO NO TIENE VECINOS PARA ENVIAR MENSAJE SETHLMAC O EL PAYLOAD ES PEQUEÑO
 				LOG_DBG("Node has not any neighbour (or payload is low) to send SetHLMAC.\r\n");
@@ -1766,6 +1802,7 @@ void list_this_node_entry (payload_entry_t *a, hlmacaddr_t *addr)
 	else
 		str_top_addr = "/";
 	
+
 	while (aux != NULL)
 	{		
 		new_address = (this_node_t*) malloc (sizeof(this_node_t)); //SE RESERVA ESPACIO
