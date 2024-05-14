@@ -8,8 +8,9 @@
 
 /*---------------------------------------------------------------------------*/
 
-void csma_output_packet (mac_callback_t sent, void *ptr);
+void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time);
 void csma_output_init (void);
+clock_time_t max_transmission_delay (void);
 
 #endif /* CSMA_OUTPUT_H_ */
 

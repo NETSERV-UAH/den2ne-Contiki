@@ -257,7 +257,7 @@ static void transmit_from_queue (void *ptr) //SE TRANSMITE DESDE LA COLA
 }
 
 
-static void schedule_transmission (struct neighbor_queue *n) //ASIGNA DELAYS PARA PLANIFICAR EN EL TIEMPO LAS TX
+static void schedule_transmission (struct neighbor_queue *n, clock_time_t *time) //ASIGNA DELAYS PARA PLANIFICAR EN EL TIEMPO LAS TX
 {
 	clock_time_t delay;
 	int backoff_exponent; /* BE in IEEE 802.15.4 */
@@ -271,6 +271,9 @@ static void schedule_transmission (struct neighbor_queue *n) //ASIGNA DELAYS PAR
 
 	LOG_DBG("scheduling transmission in %u ticks, NB=%u, BE=%u\n", (unsigned)delay, n->collisions, backoff_exponent);
 	ctimer_set(&n->transmit_timer, delay, transmit_from_queue, n);
+
+	if(time!=NULL)
+		memcpy(time, &delay, sizeof(clock_time_t));
 }
 
 
@@ -291,7 +294,7 @@ static void free_packet (struct neighbor_queue *n, struct packet_queue *p, int s
 		    n->transmissions = 0; //SE RESETEA LA INFO DE TX
 		    n->collisions = 0;
 		  
-		    schedule_transmission(n); //SE PLANIFICAN LAS SIGUIENTES TRANSMISIONES
+		    schedule_transmission(n, NULL); //SE PLANIFICAN LAS SIGUIENTES TRANSMISIONES
 		} 
 		
 		else //SI EL PAQUETE ACTUAL ERA EL ÚLTIMO (YA NO HAY MÁS EN COLA)
@@ -328,7 +331,7 @@ static void tx_done (int status, struct packet_queue *q, struct neighbor_queue *
 
 static void rexmit (struct packet_queue *q, struct neighbor_queue *n)
 {
-	schedule_transmission(n);
+	schedule_transmission(n, NULL);
 	queuebuf_update_attr_from_packetbuf(q->buf); //SE ATRIBUYE LA ENERGÍA GASTADA EN TX EL PAQUETE
 }
 
@@ -415,7 +418,7 @@ static void packet_sent (struct neighbor_queue *n, struct packet_queue *q, int s
 }
 
 
-void csma_output_packet (mac_callback_t sent, void *ptr)
+void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time)
 {	
 	struct packet_queue *q;
 	struct neighbor_queue *n;
@@ -486,7 +489,7 @@ void csma_output_packet (mac_callback_t sent, void *ptr)
 						LOG_INFO_(", len %u, seqno %u, queue length %d, free packets %ld\n", packetbuf_datalen(), packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO), list_length(n->packet_queue), memb_numfree(&packet_memb));	
 						
 						if (list_head(n->packet_queue) == q) //SI q ES EL PRIMER PAQUETE EN LA COLA SE MANDA PLANIFICA (ASAP)
-							schedule_transmission(n);
+							schedule_transmission(n, time);
 						
 						return;
 					}

@@ -175,12 +175,14 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 	static void iotorii_handle_sethlmac_timer ();
 #endif
 
+static void iotorii_handle_send_message_timer ();
 static void iotorii_handle_statistic_timer ();
 
 clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
 clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
 int number_of_neighbours;
 int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
+uint32_t last_timestamp = 0;
 
 clock_time_t convergence_time;
 
@@ -192,10 +194,10 @@ static void init_sec (void)
 	#endif
 }
 
-static void send_packet (mac_callback_t sent, void *ptr) //ENVÍA PAQUETE
+static clock_time_t send_packet (mac_callback_t sent, void *ptr, clock_time_t *delay) //ENVÍA PAQUETE
 {
 	init_sec();
-	csma_output_packet(sent, ptr);
+	csma_output_packet(sent, ptr, delay);
 }
 
 
@@ -692,24 +694,65 @@ void iotorii_handle_load_timer ()
 			update_mem_counter();
 		#endif
 
-		packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
 		
-		memcpy(packetbuf_dataptr(), &(node->load), sizeof(node->load)); //SE COPIA LOAD  
-		packetbuf_set_datalen(sizeof(node->load));
-		// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+		#if IOTORII_HLMAC_CAST == 1
+			packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
+			
+			memcpy(packetbuf_dataptr(), &(node->load), sizeof(node->load)); //SE COPIA LOAD  
+			packetbuf_set_datalen(sizeof(node->load));
+			// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 
-		neighbour_table_entry_t *nb;
-		nb = list_head(neighbour_table_entry_list);
-		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
-		{
-			if (nb->flag == 1)
+			neighbour_table_entry_t *nb;
+			nb = list_head(neighbour_table_entry_list);
+			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
 			{
-				packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
-			}	
-		}
+				if (nb->flag == 1)
+				{
+					printf("//INFO HANDLE LOAD// Padre: ");
+					for(int i = 0; i < LINKADDR_SIZE; i++) {
+						if(i > 0 && i % 2 == 0) {
+							printf(".");
+						}
+						printf("%02x", nb->addr.u8[i]);
+					}
+					printf("\n\r");
+					packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
+				}	
+			}
 
-		send_packet(NULL, NULL);
+			send_packet(NULL, NULL, NULL);
 
+		#else
+			int *load_aux = (int*) malloc (sizeof(int));
+			memcpy(load_aux, &(node->load), sizeof(node->load)); //SE COPIA LOAD  
+			payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
+			payload_entry->next = NULL;
+			payload_entry->payload = load_aux;
+			payload_entry->data_len = sizeof(int);
+
+			neighbour_table_entry_t *nb;
+			nb = list_head(neighbour_table_entry_list);
+			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+			{
+				if (nb->flag == 1)
+				{
+					printf("//INFO HANDLE LOAD// Padre: ");
+					for(int i = 0; i < LINKADDR_SIZE; i++) {
+						if(i > 0 && i % 2 == 0) {
+							printf(".");
+						}
+						printf("%02x", nb->addr.u8[i]);
+					}
+					printf("\n\r");
+					payload_entry->dest = nb->addr;
+					list_add(payload_entry_list, payload_entry);
+				}	
+			}
+
+			if(ctimer_expired(&send_sethlmac_timer))
+				ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
+
+		#endif
 		#if LOG_DBG_STATISTIC == 1		
 			printf("//INFO HANDLE LOAD// carga enviada: %d de direccion %s\r\n", node->load, node->str_addr); 
 		#endif
@@ -750,42 +793,59 @@ void iotorii_handle_share_upstream_timer ()
 		node->load = 100; //SE ASIGNA COMO MÁXIMO UNA CANTIDAD DE 100 PARA NODOS COMUNES
 	#endif
 	
-	for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+	if (!list_head(payload_entry_list)) //SI LA LISTA NO TIENE NINGUNA ENTRADA 
 	{
-		if (nb->flag == 1)
+		packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
+		printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\r\n", node->load);
+		printf("//INFO HANDLE SHARE UP// Carga informada: %d\r\n", extra_load);
+		memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
+		packetbuf_set_datalen(sizeof(extra_load));
+		send_packet(NULL, NULL, NULL);
+
+		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
 		{
-			nb->in_out = -extra_load;
-			packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
-
-			printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\r\n", node->load);
-			printf("//INFO HANDLE SHARE UP// Carga informada: %d\r\n", extra_load);
-			memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
-			packetbuf_set_datalen(sizeof(extra_load));									
-			// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-
-			neighbour_table_entry_t *nb;
-			nb = list_head(neighbour_table_entry_list);
-			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+			if (nb->flag == 1)
 			{
-				if (nb->flag == 1)
-				{			
-					packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
-				}	
-			}
-		}	
-	}
-	
-	send_packet(NULL, NULL);
+				nb->in_out = -extra_load;
+										
+				// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+				packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
+			}	
+		}
 
-		#if IOTORII_NRF52840_LOG == 1
-			if(check_write()){
-				memcpy(nvmc+0x504, &write, 4);
-				write_log(0xFFFF7777);
-				write_log(extra_load);
-				memcpy(nvmc+0x504, &read, 4);
-			}
-			update_mem_counter();
-		#endif
+	} else {
+		short *in_out_aux = (short*) malloc (sizeof(short));
+		payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
+		payload_entry->next = NULL;
+
+		neighbour_table_entry_t *nb;
+		nb = list_head(neighbour_table_entry_list);
+		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
+		{
+			if (nb->flag == 1)
+			{
+				nb->in_out = -extra_load;
+				#if IOTORII_HLMAC_CAST == 0
+					payload_entry->dest = nb->addr;
+				#endif
+				list_add(payload_entry_list, payload_entry);
+			}	
+		}
+
+		memcpy(in_out_aux, &(nb->in_out), sizeof(nb->in_out)); //SE COPIA SHARE
+		payload_entry->payload = in_out_aux;
+		payload_entry->data_len = sizeof(short);
+	}
+
+	#if IOTORII_NRF52840_LOG == 1
+		if(check_write()){
+			memcpy(nvmc+0x504, &write, 4);
+			write_log(0xFFFF7777);
+			write_log(extra_load);
+			memcpy(nvmc+0x504, &read, 4);
+		}
+		update_mem_counter();
+	#endif
 }
 
 
@@ -866,8 +926,8 @@ static void iotorii_handle_statistic_timer ()
 		
 		#if IOTORII_NODE_TYPE > 1
 			if (edge == 1){ //SI SE HAN ENVIADO TODOS LOS MENSAJES DE CARGA (PRIMERA ACTUALIZACIÓN COMPLETA)		
-				// iotorii_handle_load_timer();
-				// iotorii_handle_share_upstream_timer();
+				iotorii_handle_load_timer();
+				iotorii_handle_share_upstream_timer();
 				// ctimer_set(&load_timer,  (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
 				// ctimer_set(&share_timer, (random_rand() % IOTORII_SHARE_TIME) + IOTORII_LOAD_TIME, iotorii_handle_share_upstream_timer, NULL);
 			}
@@ -921,7 +981,7 @@ static void iotorii_handle_hello_timer ()
 		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 		LOG_DBG("Hello prepared to send\r\n");
 
-		send_packet(NULL, NULL);
+		send_packet(NULL, NULL, NULL);
 	}
 			
 	printf("//INFO HANDLE HELLO// Mensaje Hello enviado\r\n");
@@ -942,13 +1002,8 @@ static void iotorii_handle_hello_timer ()
 }
 
 
-void iotorii_handle_send_sethlmac_timer ()
+static void iotorii_handle_send_message_timer ()
 {
-
-	#if IOTORII_NODE_TYPE == 1
-		printf("INICIO CONVERGENCIA\r\n");
-		convergence_time = clock_time();
-	#endif
 	payload_entry_t *payload_entry;
 	payload_entry = list_pop(payload_entry_list); //POP PACKETBUF DE LA COLA
 	
@@ -968,15 +1023,15 @@ void iotorii_handle_send_sethlmac_timer ()
 		#endif
 		LOG_DBG("Queue: SetHLMAC prepared to send\r\n");
 		
-		send_packet(NULL, NULL);
+		clock_time_t sethlmac_delay_time;
+		send_packet(NULL, NULL, &sethlmac_delay_time);
+		printf("Tiempo retransmision: %d\n\r", sethlmac_delay_time);
 
 		//SE LIBERA MEMORIA
 		free(payload_entry->payload);
 		payload_entry->payload = NULL;
 		free(payload_entry);
 		payload_entry = NULL;
-
-		number_of_sethlmac_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES SETHLMAC
 		
 		if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
 		{
@@ -988,9 +1043,10 @@ void iotorii_handle_send_sethlmac_timer ()
 				LOG_DBG("Scheduling a SetHLMAC message after %u ticks in the future\r\n", (unsigned)sethlmac_delay_time);
 			#endif
 						
-			// ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL);
-			//iotorii_handle_send_sethlmac_timer();
-			ctimer_set(&send_sethlmac_timer, max_transmission_delay()+1, iotorii_handle_send_sethlmac_timer, NULL);
+			// ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_message_timer, NULL);
+			//iotorii_handle_send_message_timer();
+			// ctimer_set(&send_sethlmac_timer, max_transmission_delay()+1, iotorii_handle_send_message_timer, NULL);
+			ctimer_set(&send_sethlmac_timer, sethlmac_delay_time + 10, iotorii_handle_send_message_timer, NULL);
 		}
 	}
 }
@@ -1151,8 +1207,15 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 					
 					list_add(payload_entry_list, payload_entry); //SE AÑADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
 					//printf("Tiempo: %d\n\r", sethlmac_delay_time);
-					ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_sethlmac_timer, NULL); //SET TIMER
-					//iotorii_handle_send_sethlmac_timer();
+
+					#if IOTORII_NODE_TYPE == 1
+						printf("INICIO CONVERGENCIA\r\n");
+						convergence_time = clock_time();
+					#endif
+
+					number_of_sethlmac_messages++; //SE INCREMENTA EL NÚMERO DE MENSAJES SETHLMAC
+					ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_message_timer, NULL); //SET TIMER
+					//iotorii_handle_send_message_timer();
 				}
 				else //SI NO ESTÁ VACÍA NO SE CONFIGURA EL TIEMPO Y DIRECTAMENTE SE AÑADE LA ENTRADA DE PAYLOAD
 					list_add(payload_entry_list, payload_entry);
@@ -1230,7 +1293,10 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 	//ctimer_set(&statistic_timer, IOTORII_STATISTICS_TIME * CLOCK_SECOND, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
 	// clock_time_t sethlmac_delay_time = 0;
 	// sethlmac_delay_time = (IOTORII_SETHLMAC_DELAY * (CLOCK_SECOND / 1000));
-	ctimer_set(&statistic_timer, max_transmission_delay()+1, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	
+	#if IOTORII_HLMAC_CAST == 1
+		ctimer_set(&statistic_timer, max_transmission_delay()+1, iotorii_handle_statistic_timer, NULL); //SE MOSTRARÁN LAS ESTADÍSTICAS ACTUALIZADAS
+	#endif
 }
 
 
@@ -1385,11 +1451,14 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 					{
 						n_hijos_load--;
 					}
-					if(!edge && sent_load == 0 && n_hijos_load == 0){
-						// ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
-						iotorii_handle_load_timer();
-						sent_load = 1;
-					}
+
+					#if IOTORII_NODE_TYPE != 1 //NO ES ROOT
+						if(!edge && sent_load == 0 && n_hijos_load == 0){
+							// ctimer_set(&load_timer, (random_rand() % IOTORII_LOAD_TIME), iotorii_handle_load_timer, NULL);
+							iotorii_handle_load_timer();
+							sent_load = 1;
+						}
+					#endif
 				}
 			}
 			
@@ -1506,8 +1575,20 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 
 			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
 			{
-				#if IOTORII_NRF52840_LOG == 1
+				if (last_timestamp < timestamp || last_timestamp == 0){
+					last_timestamp = timestamp;
+					iotorii_neighbours_flag();
+					number_of_neighbours_flag = number_of_neighbours; //SE RESETEA PARA CADA ASIGNACIÓN DE HLMAC
+				
+					#if IOTORII_HLMAC_CAST == 0
+						n_hijos_load = number_of_neighbours;
+						n_hijos_share = number_of_neighbours;
 
+						edge = 0;
+					#endif
+				}
+
+				#if IOTORII_NRF52840_LOG == 1
 					if(check_write()){
 						memcpy(nvmc+0x504, &write, 4);
 						write_log(0xFFFFAAAA);
@@ -1520,9 +1601,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 					update_mem_counter();
 				#endif
 
-				iotorii_neighbours_flag();
 
-				number_of_neighbours_flag = number_of_neighbours; //SE RESETEA PARA CADA ASIGNACIÓN DE HLMAC
 				LOG_DBG("New HLMAC address is assigned to the node.\r\n");
 				LOG_DBG("New HLMAC address is sent to the neighbours.\r\n");
 				iotorii_send_sethlmac(*received_hlmac_addr, sender_link_address, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
@@ -1549,6 +1628,37 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				}
 			}
 			number_of_neighbours_flag--; //SE DECREMENTA EL NÚMERO DE VECINOS DE LOS QUE NO SE HA RECIBIDO HLMAC
+			
+
+			#if IOTORII_HLMAC_CAST == 0
+				n_hijos_load--;
+				n_hijos_share--;
+				
+				if (!number_of_neighbours_flag)
+				{
+					printf("es edge\r\n");
+					edge = 1;
+
+					#if IOTORII_NRF52840_LOG == 1
+						if(check_write()){
+							memcpy(nvmc+0x504, &write, 4);
+							write_log(0xFFFF9999);
+							memcpy(nvmc+0x504, &read, 4);
+						}
+						update_mem_counter();
+					#endif
+
+					iotorii_handle_load_timer();
+					// iotorii_handle_share_upstream_timer();
+				}
+
+				if(edge == 0 && n_hijos_load == 0){
+					iotorii_handle_load_timer();
+				}
+				// if(edge == 0 && n_hijos_share == 0){
+				// 	iotorii_handle_share_upstream_timer();
+				// }
+			#endif
 		}
 		else
 		{
@@ -1558,6 +1668,18 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			received_hlmac_addr->address = NULL;
 			free(received_hlmac_addr);
 			received_hlmac_addr = NULL;
+
+			#if IOTORII_HLMAC_CAST == 0
+				n_hijos_load--;
+				n_hijos_share--;
+
+				if(edge == 0 && n_hijos_load == 0){
+					iotorii_handle_load_timer();
+				}
+				if(edge == 0 && n_hijos_share == 0){
+					iotorii_handle_share_upstream_timer();
+				}
+			#endif
 		}
 	}
 	
