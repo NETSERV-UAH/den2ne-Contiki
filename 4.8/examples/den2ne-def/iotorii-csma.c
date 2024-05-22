@@ -293,9 +293,7 @@ static int max_payload (void)
 		printf("\n\r\t\t\"Message\"  :\t[");
 
 		memcpy(&mem_used, page_mem_counter+0xFFC, sizeof(int));
-		// printf("Log: %d\n\r", mem_used);
 		for(int counter = 0; counter < mem_used; counter=counter+sizeof(code)){
-			//printf("\n\rCounter: %d", counter);
 			printf("\n\r\t\t{");
 			memcpy(&code, log+counter, 4);
 			printf("\n\r\t\t\t\"Origin\"  :\t\"");
@@ -312,13 +310,11 @@ static int max_payload (void)
 				printf("\n\r\t\t\t\"Type\"    :\t\"Hello\"");
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => NUMERO DE HELLO ENVIADO
 				counter=counter+sizeof(aux_log);
-				//printf("//LOG// HELLO numero %d enviado.\n\r", aux_log);
 				break;
 
 			case 0xFFFF2222: //HELLO RECIBIDO
 				memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
 				counter=counter+sizeof(addr_log);
-				//printf("//LOG// HELLO recibido de ");
 				for(int i = 0; i < LINKADDR_SIZE; i++) {
 					if(i > 0 && i % 2 == 0) {
 						printf(".");
@@ -327,7 +323,6 @@ static int max_payload (void)
 				}
 				printf("\",");
 				printf("\n\r\t\t\t\"Type\"    :\t\"Hello\"");
-				//printf(".\n\r");
 				break;
 
 			case 0xFFFF3333: //HLMAC ENVIADA
@@ -343,12 +338,10 @@ static int max_payload (void)
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => TIMESTAMP
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\t\"Timestamp\"  :\t\"%d\",", aux_log);
-				//printf("//LOG// HLMAC enviada con timestamp %d y ", aux_log);
 				memcpy(&len_log, log+counter+sizeof(code), sizeof(len_log)); //LEN_LOG => LONGITUD DIRECCIÓN PROPIA
 				counter=counter+sizeof(len_log);
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => INICIO DE DIRECCIÓN PROPIA
 				counter=counter+sizeof(aux_log);
-				//printf("direccion %2.2X", aux_log);
 				printf("\n\r\t\t\t\t\"Prefix\"     :\t\"%2.2X", aux_log);
 				for(int k=1; k<len_log; k++){
 					memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => CADA BYTE DE DIRECCIÓN PROPIA
@@ -374,13 +367,11 @@ static int max_payload (void)
 					memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => ID DE CADA HLMAC ASIGNADA
 					printf("\" :\t\"%2.2X\"", aux_log);
 					counter=counter+sizeof(aux_log);
-					//printf("%2.2X a ", aux_log);
 					if (k+1<len_log-1)
 						printf(",");
 				}
 				printf("\n\r\t\t\t\t\t}");
 				printf("\n\r\t\t\t}");
-				//printf(".\n\r");
 				break;
 
 			case 0xFFFF4444: //HLMAC RECIBIDA
@@ -398,13 +389,11 @@ static int max_payload (void)
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => TIMESTAMP
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\t\"Timestamp\"  :\t\"%d\",", aux_log);
-				//printf("//LOG// HLMAC recibida con timestamp %d y asigna la ", aux_log);
 				memcpy(&len_log, log+counter+sizeof(code), sizeof(len_log)); //LEN_LOG => LONGITUD DIRECCIÓN PROPIA
 				counter=counter+sizeof(len_log);
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => INICIO DE DIRECCIÓN PROPIA
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\t\"Prefix\"     :\t\"%2.2X", aux_log);
-				//printf("direccion %2.2X", aux_log);
 				for(int k=1; k<len_log-1; k++){
 					memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => CADA BYTE DE DIRECCIÓN PROPIA
 					counter=counter+sizeof(aux_log);
@@ -413,7 +402,6 @@ static int max_payload (void)
 				printf("\",");
 				printf("\n\r\t\t\t\t\"HLMAC\"      :");
 				printf("\n\r\t\t\t\t\t{");
-				//printf(".\n\r");
 				printf("\n\r\t\t\t\t\t\t\"");
 				for(int i = 0; i < LINKADDR_SIZE; i++) {
 					if(i > 0 && i % 2 == 0) {
@@ -440,13 +428,11 @@ static int max_payload (void)
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log));
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
-				//printf("//LOG// LOAD con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
 				break;
 
 			case 0xFFFF6666: //LOAD RECIBIDO
 				memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
 				counter=counter+sizeof(addr_log);
-				//printf("//LOG// LOAD con valor %d recibido de ", aux_log);
 				for(int i = 0; i < LINKADDR_SIZE; i++) {
 					if(i > 0 && i % 2 == 0) {
 						printf(".");
@@ -458,7 +444,6 @@ static int max_payload (void)
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
-				//printf(".\n\r");
 				break;
 
 			case 0xFFFF7777:  //SHARE ENVIADO
@@ -473,13 +458,11 @@ static int max_payload (void)
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log));
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
-				//printf("//LOG// SHARE con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
 				break;
 
 			case 0xFFFF8888: //SHARE RECIBIDO
 				memcpy(&addr_log, log+counter+sizeof(code), sizeof(addr_log));
 				counter=counter+sizeof(addr_log);
-				//printf("//LOG// SHARE con valor %d recibido de ", aux_log);
 				for(int i = 0; i < LINKADDR_SIZE; i++) {
 					if(i > 0 && i % 2 == 0) {
 						printf(".");
@@ -491,7 +474,6 @@ static int max_payload (void)
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => VALOR DE LOAD RECIBIDO
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
-				//printf(".\n\r");
 				break;
 
 			case 0xFFFF9999: //ES EDGE
@@ -504,7 +486,6 @@ static int max_payload (void)
 				printf("\",");
 				printf("\n\r\t\t\t\"Type\"    :\t\"INFO\",");
 				printf("\n\r\t\t\t\"Content\" :\t\"Edge\"");
-				//printf(".\n\r");
 				break;
 
 			case 0xFFFFAAAA: //HLMAC RECIBIDA
@@ -522,7 +503,6 @@ static int max_payload (void)
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => INICIO DE DIRECCIÓN PROPIA
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\"Value\"   :\t\"%2.2X", aux_log);
-				//printf("direccion %2.2X", aux_log);
 				for(int k=1; k<len_log; k++){
 					memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log)); //AUX_LOG => CADA BYTE DE DIRECCIÓN PROPIA
 					counter=counter+sizeof(aux_log);
@@ -544,7 +524,6 @@ static int max_payload (void)
 				memcpy(&aux_log, log+counter+sizeof(code), sizeof(aux_log));
 				counter=counter+sizeof(aux_log);
 				printf("\n\r\t\t\t\"Value\"   :\t\"%d\"", aux_log);
-				//printf("//LOG// SHARE con valor %d enviado.\n\r", aux_log); //AUX_LOG => VALOR DE LOAD ENVIADO
 				break;
 			
 			default:
@@ -1037,17 +1016,8 @@ void iotorii_handle_send_message_timer ()
 		#endif
 		LOG_DBG("Queue: SetHLMAC prepared to send\r\n");
 		
-		printf("Mensaje programado\n\r");
 		clock_time_t sethlmac_delay_time;
 		send_packet(NULL, NULL, &sethlmac_delay_time);
-		printf("Tiempo retransmision: %d\n\r", sethlmac_delay_time);
-		printf("Destino send ");
-		for(int i = 0; i < LINKADDR_SIZE; i++) {
-			if(i > 0 && i % 2 == 0) {
-				printf(".");
-			}
-			printf("%02x", payload_entry->dest.u8[i]);
-		}
 
 		#if IOTORII_HLMAC_CAST == 1
 			//SE LIBERA MEMORIA
@@ -1214,14 +1184,6 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 				payload_entry->data_len = datalen_counter;
 				#if IOTORII_HLMAC_CAST == 0
 					payload_entry->dest = random_list[i-2]->addr;
-					printf("Destino: ");
-					for(int c = 0; c < LINKADDR_SIZE; c++) {
-						if(c > 0 && c % 2 == 0) {
-							printf(".");
-						}
-						printf("%02x", payload_entry->dest.u8[c]);
-					}
-					printf("\n\r");
 				#endif
 
 				
@@ -1240,7 +1202,6 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 					#endif
 					
 					list_add(payload_entry_list, payload_entry); //SE AÑADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
-					//printf("Tiempo: %d\n\r", sethlmac_delay_time);
 
 					#if IOTORII_NODE_TYPE == 1
 						printf("INICIO CONVERGENCIA\r\n");
@@ -1354,16 +1315,6 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 	LOG_DBG_LLADDR(sender_addr);
 	LOG_DBG("\r\n");
 
-				printf("Hello de: ");
-				for(int i = 0; i < LINKADDR_SIZE; i++) {
-					if(i > 0 && i % 2 == 0) {
-						printf(".");
-					}
-					printf("%02x", sender_addr->u8[i]);
-				}
-				printf("\n\r");
-
-
 	if (number_of_neighbours < 256) //SI NO SE HA SUPERADO EL MÁXIMO DE ENTRADAS EN LA LISTA
 	{
 		neighbour_table_entry_t *new_nb;
@@ -1396,17 +1347,14 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			LOG_DBG("A new neighbour added to IoTorii neighbour table, address: ");
 			LOG_DBG_LLADDR(sender_addr);
 			LOG_DBG(", ID: %d\r\n", new_nb->number_id);
-			
-			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\r\n");
-
 		}
 		else
 		{
 			LOG_DBG("Address of hello (");
 			LOG_DBG_LLADDR(sender_addr);
 			LOG_DBG(") message received already!\r\n");
-			printf("//INFO INCOMING HELLO// Mensaje Hello recibido\r\n");
 		}
+		printf("//INFO INCOMING HELLO// Mensaje Hello recibido\r\n");
 	}
 	else //TABLA LLENA (256)
 		LOG_WARN("The IoTorii neighbour table is full! \r\n");
@@ -1425,15 +1373,6 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 	
 	addr_t sender_link_address = *packetbuf_addr(PACKETBUF_ADDR_SENDER);
 	const addr_t *sender = &sender_link_address;
-
-				printf("Mensaje de: ");
-				for(int i = 0; i < LINKADDR_SIZE; i++) {
-					if(i > 0 && i % 2 == 0) {
-						printf(".");
-					}
-					printf("%02x", sender_link_address.u8[i]);
-				}
-				printf("\n\r");
 	
 	neighbour_table_entry_t *nb;
 	this_node_t *node;
@@ -1470,16 +1409,6 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				{
 					memcpy(&nb->load, packetbuf_dataptr(), packetbuf_data_len); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
 					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\r\n", *p_load, str_sender);
-
-					printf("Hijos LOAD: %d    Flag: %d\n\r", n_hijos_load, nb->flag);
-					printf("Origen: ");
-					for(int i = 0; i < LINKADDR_SIZE; i++) {
-						if(i > 0 && i % 2 == 0) {
-							printf(".");
-						}
-						printf("%02x", sender->u8[i]);
-					}
-					printf("\n\r");
 
 					if (nb->flag == 0 && edge == 0 && n_hijos_load != 0)
 					{
@@ -1519,16 +1448,6 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						node->load = node->load + *p_extra;
 						
 						printf("//INFO INCOMING SHARE// carga actual del nodo: %d\r\n", node->load);
-
-						printf("Hijos share: %d\n\r", n_hijos_share);
-						printf("Origen: ");
-						for(int i = 0; i < LINKADDR_SIZE; i++) {
-							if(i > 0 && i % 2 == 0) {
-								printf(".");
-							}
-							printf("%02x", sender->u8[i]);
-						}
-						printf("\n\r");
 						
 						n_hijos_share--; //SE RESTA EL HIJO DE LA CUENTA TOTAL DE HIJOS
 
@@ -1725,7 +1644,6 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 
 void iotorii_operation (void)
 {
-	printf("Longitud: %d\n\r", packetbuf_datalen());
 	// if (packetbuf_holds_broadcast())
 	// {
 		if (packetbuf_datalen() == 0) //SI LA LONGITUD ES NULA, SE HA RECIBIDO UN PAQUETE HELLO
@@ -1824,26 +1742,6 @@ static void init (void)
 		number_of_neighbours_flag = 0;
 		hlmac_table_init(); //SE CREA LA TABLA DE VECINOS
 		
-		// int erase=0x1, erase_en=0x10, eras_dis=0x0;
-		// memcpy(nvmc+0x504, &erase_en, 4);
-		// memcpy(nvmc+0x50C, &erase, 4);
-		// memcpy(nvmc+0x504, &erase_dis, 4);
-
-		// int write=0x1, read=0x0;
-		// int dis_prot = 0xFFFFFF00;
-		// memcpy(nvmc+0x504, &write, 4);
-		// memcpy(protection, &dis_prot, 4);
-		// memcpy(nvmc+0x504, &read, 4);
-
-
-		// memcpy(&check, nvmc+0x400, 4);
-		// memcpy(&check2, nvmc+0x408, 4);
-		// printf("Ready: %d\tNext: %d\n\r", check, check2);
-		// if(check && check2){
-		// 	memcpy(nvmc+0x504, &write, 4);
-		// 	memcpy(log+0x100, &data, 8);
-		// 	memcpy(nvmc+0x504, &read, 4);
-		// }
 		#if IOTORII_NRF52840_LOG == 1
 			ctimer_set(&log_timer, hello_start_time/2, read_log, NULL);
 		#endif

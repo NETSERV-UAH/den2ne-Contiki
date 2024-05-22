@@ -271,11 +271,9 @@ static void schedule_transmission (struct neighbor_queue *n, clock_time_t *time)
 
 	LOG_DBG("scheduling transmission in %u ticks, NB=%u, BE=%u\n", (unsigned)delay, n->collisions, backoff_exponent);
 	ctimer_set(&n->transmit_timer, delay, transmit_from_queue, n);
-	printf("Delay %d\n\r", delay);
 
 	if(time!=NULL){
 		memcpy(time, &delay, sizeof(clock_time_t));
-		printf("No nulo\n\r");
 	}
 }
 
@@ -450,12 +448,10 @@ void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time)
 
 	if (n == NULL) //EL VECINO NO ESTÁ REGISTRADO Y NO TIENE DIRECCIÓN
 	{
-		printf("Vecino nulo\n\r");
 		n = memb_alloc(&neighbor_memb); //ASIGNA UNA NUEVA ENTRADA AL VECINO
 	
 		if (n != NULL) //SE HA ASIGNADO BIEN EL VECINO
 		{
-			printf("Vecino no nulo\n\r");
 			linkaddr_copy(&n->addr, addr); //INICIALIZA LA ENTRADA
 		  
 			n->transmissions = 0;
@@ -470,21 +466,17 @@ void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time)
 
 	if (n != NULL) //EL VECINO TIENE DIRECCIÓN REGISTRADA
 	{
-		printf("Vecino\n\r");
 		if (list_length(n->packet_queue) < CSMA_MAX_PACKET_PER_NEIGHBOR) //SE AÑADE PAQUETE A LA COLA 
 		{
 		    q = memb_alloc(&packet_memb); //ASIGNA UNA NUEVA ENTRADA AL PAQUETE
-			printf("Memoria alojada\n\r");
 			
 		    if (q != NULL) //SE HA ASIGNADO BIEN EL PAQUETE
 			{
 				q->ptr = memb_alloc(&metadata_memb); //ASIGNA METADATOS
-				printf("Metadatos alojados\n\r");
 				
 				if (q->ptr != NULL) //SE HAN ASIGNADO BIEN LOS METADATOS
 				{
 					q->buf = queuebuf_new_from_packetbuf(); //ASIGNA UN BUFFER A LA COLA
-					printf("Buffer alojado\n\r");
 					
 					if (q->buf != NULL) //SE HA ASIGNADO BIEN EL BUFFER
 					{
