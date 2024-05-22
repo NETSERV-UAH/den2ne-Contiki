@@ -127,6 +127,8 @@ int csma_security_parse_frame (void);
 //MANTENIMIENTO DE CLAVE PARA CSMA
 int csma_security_set_key (uint8_t index, const uint8_t *key);
 
+void iotorii_handle_send_message_timer ();
+
 /*---------------------------------------------------------------------------*/
 
 //adicional

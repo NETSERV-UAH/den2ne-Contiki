@@ -271,9 +271,12 @@ static void schedule_transmission (struct neighbor_queue *n, clock_time_t *time)
 
 	LOG_DBG("scheduling transmission in %u ticks, NB=%u, BE=%u\n", (unsigned)delay, n->collisions, backoff_exponent);
 	ctimer_set(&n->transmit_timer, delay, transmit_from_queue, n);
+	printf("Delay %d\n\r", delay);
 
-	if(time!=NULL)
+	if(time!=NULL){
 		memcpy(time, &delay, sizeof(clock_time_t));
+		printf("No nulo\n\r");
+	}
 }
 
 
@@ -326,6 +329,11 @@ static void tx_done (int status, struct packet_queue *q, struct neighbor_queue *
 
 	free_packet(n, q, status); //SE BORRA DE LA COLA
 	mac_call_sent_callback(sent, cptr, status, ntx);
+	#if IOTORII_HLMAC_CAST == 0
+		iotorii_handle_send_message_timer();
+		// static struct ctimer send_sethlmac_timer;
+		// ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
+	#endif
 }
 
 
@@ -442,10 +450,12 @@ void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time)
 
 	if (n == NULL) //EL VECINO NO ESTÁ REGISTRADO Y NO TIENE DIRECCIÓN
 	{
+		printf("Vecino nulo\n\r");
 		n = memb_alloc(&neighbor_memb); //ASIGNA UNA NUEVA ENTRADA AL VECINO
 	
 		if (n != NULL) //SE HA ASIGNADO BIEN EL VECINO
 		{
+			printf("Vecino no nulo\n\r");
 			linkaddr_copy(&n->addr, addr); //INICIALIZA LA ENTRADA
 		  
 			n->transmissions = 0;
@@ -453,22 +463,28 @@ void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time)
 		  
 			LIST_STRUCT_INIT(n, packet_queue); //INICIALIZA SU COLA 
 			list_add(neighbour_list, n); //AÑADE AL VECINO A LA LISTA DE VECINOS
+		} else if (time != NULL){
+			*time = -1;
 		}
 	}
 
 	if (n != NULL) //EL VECINO TIENE DIRECCIÓN REGISTRADA
 	{
+		printf("Vecino\n\r");
 		if (list_length(n->packet_queue) < CSMA_MAX_PACKET_PER_NEIGHBOR) //SE AÑADE PAQUETE A LA COLA 
 		{
 		    q = memb_alloc(&packet_memb); //ASIGNA UNA NUEVA ENTRADA AL PAQUETE
+			printf("Memoria alojada\n\r");
 			
 		    if (q != NULL) //SE HA ASIGNADO BIEN EL PAQUETE
 			{
 				q->ptr = memb_alloc(&metadata_memb); //ASIGNA METADATOS
+				printf("Metadatos alojados\n\r");
 				
 				if (q->ptr != NULL) //SE HAN ASIGNADO BIEN LOS METADATOS
 				{
 					q->buf = queuebuf_new_from_packetbuf(); //ASIGNA UN BUFFER A LA COLA
+					printf("Buffer alojado\n\r");
 					
 					if (q->buf != NULL) //SE HA ASIGNADO BIEN EL BUFFER
 					{
@@ -490,9 +506,11 @@ void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time)
 						
 						if (list_head(n->packet_queue) == q) //SI q ES EL PRIMER PAQUETE EN LA COLA SE MANDA PLANIFICA (ASAP)
 							schedule_transmission(n, time);
-						
+
 						return;
 					}
+					// else if (time != NULL)
+					// 	*time = -1;
 					
 					memb_free(&metadata_memb, q->ptr); //NO SE HA ASIGNADO BIEN EL BUFFER Y SE BORRAN LOS METADATOS
 					LOG_WARN("could not allocate queuebuf, dropping packet\n");

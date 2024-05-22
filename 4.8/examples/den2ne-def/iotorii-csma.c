@@ -86,7 +86,7 @@
 #ifdef IOTORII_CONF_MAX_HELLO_DIFF
 	#define IOTORII_MAX_HELLO_DIFF IOTORII_CONF_MAX_HELLO_DIFF
 #else
-	#define IOTORII_MAX_HELLO_DIFF 2
+	#define IOTORII_MAX_HELLO_DIFF 5
 #endif
 
 /*CUANDO TERMINA EL PRIMER PASO DE ENVÍO DE CARGAS (NODOS EDGE) COMIENZA EL SHARE TIMER PARA LOS NODOS EDGE.
@@ -169,13 +169,16 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 	int page_mem_counter = 0xF4000;
 #endif
 
+// #if IOTORII_HLMAC_CAST == 0
+// #endif
+
 /*---------------------------------------------------------------------------*/
 
 #if IOTORII_NODE_TYPE == 1 //ROOT
 	static void iotorii_handle_sethlmac_timer ();
 #endif
 
-static void iotorii_handle_send_message_timer ();
+void iotorii_handle_send_message_timer ();
 static void iotorii_handle_statistic_timer ();
 
 clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
@@ -671,6 +674,8 @@ uint32_t iotorii_extract_timestamp (void) //SE EXTRAE EL TIMESTAMP A PARTIR DEL 
 	* +-----------+------------+--------+-----+------+-----+-----+------+
 	* | Timestamp | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
 	* +-----------+------------+--------+-----+------+-----+-----+------+ -------->*/
+
+	free(packetbuf_ptr_head);
 	
 	return timestamp;
 }
@@ -745,12 +750,16 @@ void iotorii_handle_load_timer ()
 					}
 					printf("\n\r");
 					payload_entry->dest = nb->addr;
+					if(list_head(payload_entry_list) == NULL)
+						ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
 					list_add(payload_entry_list, payload_entry);
 				}	
 			}
 
-			if(ctimer_expired(&send_sethlmac_timer))
-				ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
+			// if(ctimer_expired(&send_sethlmac_timer))
+			// 	ctimer_set(&send_sethlmac_timer, max_transmission_delay(), iotorii_handle_send_message_timer, NULL);
+				// ctimer_restart(&send_sethlmac_timer);
+				// ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
 
 		#endif
 		#if LOG_DBG_STATISTIC == 1		
@@ -793,8 +802,8 @@ void iotorii_handle_share_upstream_timer ()
 		node->load = 100; //SE ASIGNA COMO MÁXIMO UNA CANTIDAD DE 100 PARA NODOS COMUNES
 	#endif
 	
-	if (!list_head(payload_entry_list)) //SI LA LISTA NO TIENE NINGUNA ENTRADA 
-	{
+	
+	#if IOTORII_HLMAC_CAST == 1
 		packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
 		printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\r\n", node->load);
 		printf("//INFO HANDLE SHARE UP// Carga informada: %d\r\n", extra_load);
@@ -813,13 +822,11 @@ void iotorii_handle_share_upstream_timer ()
 			}	
 		}
 
-	} else {
+	#else
 		short *in_out_aux = (short*) malloc (sizeof(short));
 		payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
 		payload_entry->next = NULL;
 
-		neighbour_table_entry_t *nb;
-		nb = list_head(neighbour_table_entry_list);
 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
 		{
 			if (nb->flag == 1)
@@ -828,14 +835,21 @@ void iotorii_handle_share_upstream_timer ()
 				#if IOTORII_HLMAC_CAST == 0
 					payload_entry->dest = nb->addr;
 				#endif
-				list_add(payload_entry_list, payload_entry);
 			}	
 		}
 
-		memcpy(in_out_aux, &(nb->in_out), sizeof(nb->in_out)); //SE COPIA SHARE
+		memcpy(in_out_aux, &extra_load, sizeof(short)); //SE COPIA SHARE
 		payload_entry->payload = in_out_aux;
 		payload_entry->data_len = sizeof(short);
-	}
+		if(list_head(payload_entry_list) == NULL)
+			ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
+		list_add(payload_entry_list, payload_entry);
+
+		// if(ctimer_expired(&send_sethlmac_timer))
+		// 	ctimer_set(&send_sethlmac_timer, max_transmission_delay(), iotorii_handle_send_message_timer, NULL);
+			// ctimer_restart(&send_sethlmac_timer);
+			// ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
+	#endif
 
 	#if IOTORII_NRF52840_LOG == 1
 		if(check_write()){
@@ -1002,7 +1016,7 @@ static void iotorii_handle_hello_timer ()
 }
 
 
-static void iotorii_handle_send_message_timer ()
+void iotorii_handle_send_message_timer ()
 {
 	payload_entry_t *payload_entry;
 	payload_entry = list_pop(payload_entry_list); //POP PACKETBUF DE LA COLA
@@ -1023,31 +1037,51 @@ static void iotorii_handle_send_message_timer ()
 		#endif
 		LOG_DBG("Queue: SetHLMAC prepared to send\r\n");
 		
+		printf("Mensaje programado\n\r");
 		clock_time_t sethlmac_delay_time;
 		send_packet(NULL, NULL, &sethlmac_delay_time);
 		printf("Tiempo retransmision: %d\n\r", sethlmac_delay_time);
-
-		//SE LIBERA MEMORIA
-		free(payload_entry->payload);
-		payload_entry->payload = NULL;
-		free(payload_entry);
-		payload_entry = NULL;
-		
-		if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
-		{
-			//SE PLANIFICA EL SIGUIENTE MENSAJE
-			// clock_time_t sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 1000);
-			//sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
-			
-			#if LOG_DBG_DEVELOPER == 1
-				LOG_DBG("Scheduling a SetHLMAC message after %u ticks in the future\r\n", (unsigned)sethlmac_delay_time);
-			#endif
-						
-			// ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_message_timer, NULL);
-			//iotorii_handle_send_message_timer();
-			// ctimer_set(&send_sethlmac_timer, max_transmission_delay()+1, iotorii_handle_send_message_timer, NULL);
-			ctimer_set(&send_sethlmac_timer, sethlmac_delay_time + 10, iotorii_handle_send_message_timer, NULL);
+		printf("Destino send ");
+		for(int i = 0; i < LINKADDR_SIZE; i++) {
+			if(i > 0 && i % 2 == 0) {
+				printf(".");
+			}
+			printf("%02x", payload_entry->dest.u8[i]);
 		}
+
+		#if IOTORII_HLMAC_CAST == 1
+			//SE LIBERA MEMORIA
+			free(payload_entry->payload);
+			payload_entry->payload = NULL;
+			free(payload_entry);
+			payload_entry = NULL;
+		
+			if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
+			{
+				//SE PLANIFICA EL SIGUIENTE MENSAJE
+				// clock_time_t sethlmac_delay_time = IOTORII_SETHLMAC_DELAY/2 * (CLOCK_SECOND / 1000);
+				//sethlmac_delay_time = sethlmac_delay_time + (random_rand() % sethlmac_delay_time);
+				
+				#if LOG_DBG_DEVELOPER == 1
+					LOG_DBG("Scheduling a SetHLMAC message after %u ticks in the future\r\n", (unsigned)sethlmac_delay_time);
+				#endif
+							
+				// ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_message_timer, NULL);
+				//iotorii_handle_send_message_timer();
+				// ctimer_set(&send_sethlmac_timer, max_transmission_delay()+1, iotorii_handle_send_message_timer, NULL);
+				ctimer_set(&send_sethlmac_timer, sethlmac_delay_time + 10, iotorii_handle_send_message_timer, NULL);
+			}
+		#else
+			if(sethlmac_delay_time == -1){
+				list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
+			} else {
+				//SE LIBERA MEMORIA
+				free(payload_entry->payload);
+				payload_entry->payload = NULL;
+				free(payload_entry);
+				payload_entry = NULL;
+			}
+		#endif
 	}
 }
 
@@ -1649,15 +1683,15 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 					#endif
 
 					iotorii_handle_load_timer();
-					// iotorii_handle_share_upstream_timer();
+					iotorii_handle_share_upstream_timer();
 				}
 
 				if(edge == 0 && n_hijos_load == 0){
 					iotorii_handle_load_timer();
 				}
-				// if(edge == 0 && n_hijos_share == 0){
-				// 	iotorii_handle_share_upstream_timer();
-				// }
+				if(edge == 0 && n_hijos_share == 0){
+					iotorii_handle_share_upstream_timer();
+				}
 			#endif
 		}
 		else
