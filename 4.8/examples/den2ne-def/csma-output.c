@@ -501,8 +501,6 @@ void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time)
 
 						return;
 					}
-					// else if (time != NULL)
-					// 	*time = -1;
 					
 					memb_free(&metadata_memb, q->ptr); //NO SE HA ASIGNADO BIEN EL BUFFER Y SE BORRAN LOS METADATOS
 					LOG_WARN("could not allocate queuebuf, dropping packet\n");

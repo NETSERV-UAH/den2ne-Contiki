@@ -43,7 +43,7 @@
 #ifdef IOTORII_CONF_HLMAC_CAST
 	#define IOTORII_HLMAC_CAST IOTORII_CONF_HLMAC_CAST
 #else
-	#define IOTORII_HLMAC_CAST 1 //To send HLMACS through broadcast (1) or unicast (0)
+	#define IOTORII_HLMAC_CAST 0 //To send HLMACS through broadcast (1) or unicast (0)
 #endif
 
 #ifdef CSMA_CONF_SEND_SOFT_ACK
@@ -77,8 +77,10 @@
 
 #if IOTORII_IPV6 == 1 
 	#define addr_t uip_ipaddr_t
+	#define null_addr 
 #else
 	#define addr_t linkaddr_t
+	#define null_addr linkaddr_null
 #endif
 
 struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA

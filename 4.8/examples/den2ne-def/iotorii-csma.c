@@ -1016,8 +1016,10 @@ void iotorii_handle_send_message_timer ()
 		#endif
 		LOG_DBG("Queue: SetHLMAC prepared to send\r\n");
 		
+		printf("Mensaje programado\n\r");
 		clock_time_t sethlmac_delay_time;
 		send_packet(NULL, NULL, &sethlmac_delay_time);
+		printf("Tiempo retransmision: %d\n\r", sethlmac_delay_time);
 
 		#if IOTORII_HLMAC_CAST == 1
 			//SE LIBERA MEMORIA
@@ -1184,6 +1186,14 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 				payload_entry->data_len = datalen_counter;
 				#if IOTORII_HLMAC_CAST == 0
 					payload_entry->dest = random_list[i-2]->addr;
+					printf("Destino: ");
+					for(int c = 0; c < LINKADDR_SIZE; c++) {
+						if(c > 0 && c % 2 == 0) {
+							printf(".");
+						}
+						printf("%02x", payload_entry->dest.u8[c]);
+					}
+					printf("\n\r");
 				#endif
 
 				
@@ -1202,6 +1212,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 					#endif
 					
 					list_add(payload_entry_list, payload_entry); //SE AÃ‘ADE AL FINAL DE LA LISTA LA ENTRADA DE PAYLOAD
+					//printf("Tiempo: %d\n\r", sethlmac_delay_time);
 
 					#if IOTORII_NODE_TYPE == 1
 						printf("INICIO CONVERGENCIA\r\n");
@@ -1315,6 +1326,16 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÃ“N) 
 	LOG_DBG_LLADDR(sender_addr);
 	LOG_DBG("\r\n");
 
+				printf("Hello de: ");
+				for(int i = 0; i < LINKADDR_SIZE; i++) {
+					if(i > 0 && i % 2 == 0) {
+						printf(".");
+					}
+					printf("%02x", sender_addr->u8[i]);
+				}
+				printf("\n\r");
+
+
 	if (number_of_neighbours < 256) //SI NO SE HA SUPERADO EL MÃXIMO DE ENTRADAS EN LA LISTA
 	{
 		neighbour_table_entry_t *new_nb;
@@ -1373,6 +1394,15 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÃ
 	
 	addr_t sender_link_address = *packetbuf_addr(PACKETBUF_ADDR_SENDER);
 	const addr_t *sender = &sender_link_address;
+
+				printf("Mensaje de: ");
+				for(int i = 0; i < LINKADDR_SIZE; i++) {
+					if(i > 0 && i % 2 == 0) {
+						printf(".");
+					}
+					printf("%02x", sender_link_address.u8[i]);
+				}
+				printf("\n\r");
 	
 	neighbour_table_entry_t *nb;
 	this_node_t *node;
@@ -1409,6 +1439,16 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÃ
 				{
 					memcpy(&nb->load, packetbuf_dataptr(), packetbuf_data_len); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
 					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\r\n", *p_load, str_sender);
+
+					printf("Hijos LOAD: %d    Flag: %d\n\r", n_hijos_load, nb->flag);
+					printf("Origen: ");
+					for(int i = 0; i < LINKADDR_SIZE; i++) {
+						if(i > 0 && i % 2 == 0) {
+							printf(".");
+						}
+						printf("%02x", sender->u8[i]);
+					}
+					printf("\n\r");
 
 					if (nb->flag == 0 && edge == 0 && n_hijos_load != 0)
 					{
@@ -1448,6 +1488,16 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÃ
 						node->load = node->load + *p_extra;
 						
 						printf("//INFO INCOMING SHARE// carga actual del nodo: %d\r\n", node->load);
+
+						printf("Hijos share: %d\n\r", n_hijos_share);
+						printf("Origen: ");
+						for(int i = 0; i < LINKADDR_SIZE; i++) {
+							if(i > 0 && i % 2 == 0) {
+								printf(".");
+							}
+							printf("%02x", sender->u8[i]);
+						}
+						printf("\n\r");
 						
 						n_hijos_share--; //SE RESTA EL HIJO DE LA CUENTA TOTAL DE HIJOS
 
@@ -1528,6 +1578,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÃ
 
 			if (is_added) //SI SE HA ASIGNADO HLMAC AL NODO
 			{
+				printf("Longitud lista node: %d\n\r", list_length(node_list));
 				if (last_timestamp < timestamp || last_timestamp == 0){
 					last_timestamp = timestamp;
 					iotorii_neighbours_flag();
@@ -1539,6 +1590,11 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÃ
 
 						edge = 0;
 					#endif
+
+					//ELIMINAR TODAS LAS ENTRADAS DE LA LISTA
+					while(list_head(node_list) != NULL){
+						free(list_chop(node_list));
+					}
 				}
 
 				#if IOTORII_NRF52840_LOG == 1
@@ -1644,6 +1700,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÃ
 
 void iotorii_operation (void)
 {
+	printf("Longitud: %d\n\r", packetbuf_datalen());
 	// if (packetbuf_holds_broadcast())
 	// {
 		if (packetbuf_datalen() == 0) //SI LA LONGITUD ES NULA, SE HA RECIBIDO UN PAQUETE HELLO
@@ -1742,6 +1799,26 @@ static void init (void)
 		number_of_neighbours_flag = 0;
 		hlmac_table_init(); //SE CREA LA TABLA DE VECINOS
 		
+		// int erase=0x1, erase_en=0x10, eras_dis=0x0;
+		// memcpy(nvmc+0x504, &erase_en, 4);
+		// memcpy(nvmc+0x50C, &erase, 4);
+		// memcpy(nvmc+0x504, &erase_dis, 4);
+
+		// int write=0x1, read=0x0;
+		// int dis_prot = 0xFFFFFF00;
+		// memcpy(nvmc+0x504, &write, 4);
+		// memcpy(protection, &dis_prot, 4);
+		// memcpy(nvmc+0x504, &read, 4);
+
+
+		// memcpy(&check, nvmc+0x400, 4);
+		// memcpy(&check2, nvmc+0x408, 4);
+		// printf("Ready: %d\tNext: %d\n\r", check, check2);
+		// if(check && check2){
+		// 	memcpy(nvmc+0x504, &write, 4);
+		// 	memcpy(log+0x100, &data, 8);
+		// 	memcpy(nvmc+0x504, &read, 4);
+		// }
 		#if IOTORII_NRF52840_LOG == 1
 			ctimer_set(&log_timer, hello_start_time/2, read_log, NULL);
 		#endif
