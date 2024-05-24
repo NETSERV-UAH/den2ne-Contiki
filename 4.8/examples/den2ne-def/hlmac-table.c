@@ -26,6 +26,13 @@ void hlmac_table_init(void)
 
 uint8_t hlmactable_add (const hlmacaddr_t addr, uint64_t timestamp)
 {
+	if (number_of_hlmac_addresses>0) //COMPRUEBA SI HAY UNA ENTRADA PARA COMPROBAR QUÉ TIMESTAMP ES MÁS RECIENTE
+	{
+		hlmac_table_entry_t* entry = list_head (hlmac_table_entry_list);
+		if (timestamp > entry->timestamp)
+			hlmactable_clean(); //ELIMINA TODA LA TABLA
+	}
+
 	if (number_of_hlmac_addresses >= 255) //SI LA TABLA ESTÁ LLENA (255 DIRECCIONES)
 	{ 
 		#if LOG_DBG_DEVELOPER == 1
@@ -34,16 +41,7 @@ uint8_t hlmactable_add (const hlmacaddr_t addr, uint64_t timestamp)
 		return 0;
 	}
 
-	if (number_of_hlmac_addresses>0) //COMPRUEBA SI HAY UNA ENTRADA PARA COMPROBAR QUÉ TIMESTAMP ES MÁS RECIENTE
-	{
-		hlmac_table_entry_t* entry = list_head (hlmac_table_entry_list);
-		if (timestamp > entry->timestamp)
-			hlmactable_clean(); //ELIMINA TODA LA TABLA
-		//else if (timestamp == entry->timestamp) //SI ES IGUAL SE RETRANSMITE (CREA BUCLES)
-		//	return 1;
-
-	}
-
+#if HLMAC_ADD_HLMAC == HLMAC_FIRST_HLMAC
 	if ( (HLMAC_MAX_HLMAC == -1) || ((HLMAC_MAX_HLMAC != -1)&&(number_of_hlmac_addresses < HLMAC_MAX_HLMAC)) ) //SI NO SE HA SUPERADO LA CAPACIDAD DE LA TABLA
 	{
 		hlmac_table_entry_t* entry = (hlmac_table_entry_t*) malloc (sizeof(hlmac_table_entry_t)); //SE RESERVA ESPACIO
@@ -82,6 +80,9 @@ uint8_t hlmactable_add (const hlmacaddr_t addr, uint64_t timestamp)
 
 		return 0;
 	}
+#else
+	//CÓDIGO PARA AÑADIR SHORTEST HLMAC RECIBIDA
+#endif
 }
 
 uint8_t hlmactable_clean (void)

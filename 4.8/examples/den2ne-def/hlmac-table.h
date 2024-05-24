@@ -8,6 +8,12 @@
 //#include "lib/list.h"
 //#include <stdio.h>
 
+#ifndef HLMAC_CONF_ADD_HLMAC
+#define HLMAC_ADD_HLMAC HLMAC_FIRST_HLMAC //HLMAC_FIRST_HLMAC O HLMAC_SHORTEST_HLMAC
+#else
+#define HLMAC_ADD_HLMAC HLMAC_CONF_ADD_HLMAC
+#endif
+
 /*---------------------------------------------------------------------------*/
 
 struct hlmac_table_entry
