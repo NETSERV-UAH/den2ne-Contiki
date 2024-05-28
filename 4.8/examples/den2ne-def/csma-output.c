@@ -327,11 +327,6 @@ static void tx_done (int status, struct packet_queue *q, struct neighbor_queue *
 
 	free_packet(n, q, status); //SE BORRA DE LA COLA
 	mac_call_sent_callback(sent, cptr, status, ntx);
-	#if IOTORII_HLMAC_CAST == 0
-		iotorii_handle_send_message_timer();
-		// static struct ctimer send_sethlmac_timer;
-		// ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
-	#endif
 }
 
 
@@ -459,8 +454,6 @@ void csma_output_packet (mac_callback_t sent, void *ptr, clock_time_t *time)
 		  
 			LIST_STRUCT_INIT(n, packet_queue); //INICIALIZA SU COLA 
 			list_add(neighbour_list, n); //AÑADE AL VECINO A LA LISTA DE VECINOS
-		} else if (time != NULL){
-			*time = -1;
 		}
 	}
 

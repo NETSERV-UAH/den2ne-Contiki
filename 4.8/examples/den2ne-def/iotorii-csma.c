@@ -617,10 +617,10 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 		packetbuf_ptr++;
 		datalen_counter++;
 
-		memcpy(&link_address, packetbuf_ptr, LINKADDR_SIZE); //COPIA DIRECCIÓN MAC DEL VECINO
+		memcpy(&link_address, packetbuf_ptr, ADDR_SIZE); //COPIA DIRECCIÓN MAC DEL VECINO
 		
-		packetbuf_ptr += LINKADDR_SIZE;
-		datalen_counter += LINKADDR_SIZE;
+		packetbuf_ptr += ADDR_SIZE;
+		datalen_counter += ADDR_SIZE;
 	} 
 	
 	free(packetbuf_ptr_head); //SE LIBERA MEMORIA
@@ -707,12 +707,11 @@ void iotorii_handle_load_timer ()
 			send_packet(NULL, NULL, NULL);
 
 		#else
-			int *load_aux = (int*) malloc (sizeof(int));
-			memcpy(load_aux, &(node->load), sizeof(node->load)); //SE COPIA LOAD  
 			payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
 			payload_entry->next = NULL;
-			payload_entry->payload = load_aux;
+			payload_entry->payload = (int*) malloc (sizeof(int));
 			payload_entry->data_len = sizeof(int);
+			memcpy(payload_entry->payload, &(node->load), sizeof(node->load)); //SE COPIA LOAD  
 
 			neighbour_table_entry_t *nb;
 			nb = list_head(neighbour_table_entry_list);
@@ -802,7 +801,6 @@ void iotorii_handle_share_upstream_timer ()
 		}
 
 	#else
-		short *in_out_aux = (short*) malloc (sizeof(short));
 		payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
 		payload_entry->next = NULL;
 
@@ -817,8 +815,8 @@ void iotorii_handle_share_upstream_timer ()
 			}	
 		}
 
-		memcpy(in_out_aux, &extra_load, sizeof(short)); //SE COPIA SHARE
-		payload_entry->payload = in_out_aux;
+		payload_entry->payload = (short*) malloc (sizeof(short));
+		memcpy(payload_entry->payload, &extra_load, sizeof(short)); //SE COPIA SHARE
 		payload_entry->data_len = sizeof(short);
 		if(list_head(payload_entry_list) == NULL)
 			ctimer_set(&send_sethlmac_timer, 10, iotorii_handle_send_message_timer, NULL);
@@ -1017,7 +1015,7 @@ void iotorii_handle_send_message_timer ()
 		LOG_DBG("Queue: SetHLMAC prepared to send\r\n");
 		
 		printf("Mensaje programado\n\r");
-		clock_time_t sethlmac_delay_time;
+		clock_time_t sethlmac_delay_time = 1000;
 		send_packet(NULL, NULL, &sethlmac_delay_time);
 		printf("Tiempo retransmision: %d\n\r", sethlmac_delay_time);
 
@@ -1044,9 +1042,12 @@ void iotorii_handle_send_message_timer ()
 				ctimer_set(&send_sethlmac_timer, sethlmac_delay_time + 10, iotorii_handle_send_message_timer, NULL);
 			}
 		#else
-			if(sethlmac_delay_time == -1){
+
+			if(sethlmac_delay_time == 1000){
+				ctimer_set(&send_sethlmac_timer, max_transmission_delay()/2, iotorii_handle_send_message_timer, NULL);
 				list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
 			} else {
+				ctimer_set(&send_sethlmac_timer, sethlmac_delay_time + 1, iotorii_handle_send_message_timer, NULL);
 				//SE LIBERA MEMORIA
 				free(payload_entry->payload);
 				payload_entry->payload = NULL;
@@ -1592,8 +1593,12 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 					#endif
 
 					//ELIMINAR TODAS LAS ENTRADAS DE LA LISTA
+					this_node_t *new_address;
 					while(list_head(node_list) != NULL){
-						free(list_chop(node_list));
+						new_address = list_chop(node_list);
+						free(new_address->str_addr);
+						free(new_address->str_top_addr);
+						free(new_address);
 					}
 				}
 
