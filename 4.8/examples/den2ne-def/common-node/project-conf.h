@@ -55,13 +55,13 @@
 #define NETSTACK_CONF_MAC      csma_driver
 #endif
 
-#ifndef IOTORII_CONF_IPV6
-    #define IOTORII_CONF_IPV6 0 //POR DEFECTO NO USA IPv6
-    // #include "net/ipv6/multicast/uip-mcast6-engines.h"
-    // #ifndef UIP_MCAST6_CONF_ENGINE
-    //     #define UIP_MCAST6_CONF_ENGINE UIP_MCAST6_ENGINE_MPL
-    // #endif
-#endif
+// #ifndef IOTORII_CONF_IPV6
+//     #define IOTORII_CONF_IPV6 0
+//     // #include "net/ipv6/multicast/uip-mcast6-engines.h"
+//     // #ifndef UIP_MCAST6_CONF_ENGINE
+//     //     #define UIP_MCAST6_CONF_ENGINE UIP_MCAST6_ENGINE_MPL
+//     // #endif
+// #endif
 
 #ifndef IOTORII_CONF_NRF52840_LOG
     #define IOTORII_CONF_NRF52840_LOG 0 //POR DEFECTO USA LOG PARA NRF52840-DK

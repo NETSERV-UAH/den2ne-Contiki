@@ -21,7 +21,7 @@
 #ifdef IOTORII_CONF_IPV6
 	#define IOTORII_IPV6 IOTORII_CONF_IPV6
 #else
-	#define IOTORII_IPV6 0 //To use (1) or not (0) IPv6
+	#define IOTORII_IPV6 0 //To use IPv6 (1) or not (0)
 #endif
 
 //#if IOTORII_IPV6 == 1 
@@ -31,7 +31,7 @@
 #ifdef IOTORII_CONF_NRF52840_LOG
 	#define IOTORII_NRF52840_LOG IOTORII_CONF_NRF52840_LOG
 #else
-	#define IOTORII_NRF52840_LOG 1 //To log data (1) or not (0)
+	#define IOTORII_NRF52840_LOG 0 //To log data (1) or not (0)
 #endif
 
 #ifdef IOTORII_CONF_NODE_TYPE
@@ -75,14 +75,29 @@
 
 /*---------------------------------------------------------------------------*/
 
-#if IOTORII_IPV6 == 1 
+#if IOTORII_IPV6 == 1
+	#include "net/netstack.h"
+	#include "net/routing/routing.h"
+	#include "net/ipv6/simple-udp.h"
+
+	#include "net/ipv6/uip-ds6.h"
+	#include "net/ipv6/uiplib.h"
+	#include "net/ipv6/uip.h"
+	
 	#define addr_t uip_ipaddr_t
-	#define null_addr 
 	#define ADDR_SIZE 16
+	#define addr_cmp(addr1, addr2) uip_ip6addr_cmp(addr1, addr2)
+	#define addr_to_str(buf, addr, length) uiplib_ipaddr_snprint(buf, length, addr)
+	#define SIZE 32 //LONGITUD PARA IMPRIMIR LA DIRECCIÓN
+	
 #else
-	#define ADDR_SIZE LINKADDR_SIZE
 	#define addr_t linkaddr_t
+	#define ADDR_SIZE LINKADDR_SIZE
 	#define null_addr linkaddr_null
+	#define addr_node linkaddr_node_addr
+	#define addr_cmp(addr1, addr2) linkaddr_cmp(addr1, addr2)
+	#define addr_to_str(buf, addr, length) link_addr_to_str(buf, *addr, length)
+	#define SIZE 1 //LONGITUD PARA IMPRIMIR LA DIRECCIÓN
 #endif
 
 struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA
@@ -136,7 +151,7 @@ void iotorii_handle_send_message_timer ();
 /*---------------------------------------------------------------------------*/
 
 //adicional
-char *link_addr_to_str (const linkaddr_t addr, int length);
+void link_addr_to_str (char* buf, const addr_t addr, int length);
 
 #endif /* IOTORII_CSMA_H_ */
 
