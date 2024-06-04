@@ -14,14 +14,13 @@
 #include "net/mac/mac.h"
 #include "dev/radio.h"
 
-#include "net/ipv6/uip.h"
 
 /*---------------------------------------------------------------------------*/
 
 #ifdef IOTORII_CONF_IPV6
 	#define IOTORII_IPV6 IOTORII_CONF_IPV6
 #else
-	#define IOTORII_IPV6 0 //To use IPv6 (1) or not (0)
+	#define IOTORII_IPV6 1 //To use IPv6 (1) or not (0)
 #endif
 
 //#if IOTORII_IPV6 == 1 
@@ -89,6 +88,7 @@
 	#define addr_cmp(addr1, addr2) uip_ip6addr_cmp(addr1, addr2)
 	#define addr_to_str(buf, addr, length) uiplib_ipaddr_snprint(buf, length, addr)
 	#define SIZE 32 //LONGITUD PARA IMPRIMIR LA DIRECCIÓN
+	#define max_payl() 128 //TODO: CAMBIAR
 	
 #else
 	#define addr_t linkaddr_t
@@ -98,6 +98,7 @@
 	#define addr_cmp(addr1, addr2) linkaddr_cmp(addr1, addr2)
 	#define addr_to_str(buf, addr, length) link_addr_to_str(buf, *addr, length)
 	#define SIZE 1 //LONGITUD PARA IMPRIMIR LA DIRECCIÓN
+	#define max_payl() max_payload()
 #endif
 
 struct neighbour_table_entry //ESTRUCTURA DE ENTRADA DE TABLA

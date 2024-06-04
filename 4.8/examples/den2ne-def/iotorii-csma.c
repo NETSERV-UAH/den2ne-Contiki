@@ -108,8 +108,8 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 #if IOTORII_NODE_TYPE > 0 //ROOT O NODO COMÚN
 	static struct ctimer hello_timer;
 	static struct ctimer send_sethlmac_timer;
-	static struct ctimer load_timer;
-	static struct ctimer share_timer;
+	// static struct ctimer load_timer;
+	// static struct ctimer share_timer;
 	static struct ctimer statistic_timer;
 	uint16_t number_of_hello_messages = 0;
 
@@ -248,8 +248,8 @@ static int max_payload (void)
 	#include "net/ipv6/uiplib.h"
 	#include "net/ipv6/uip.h"
 
-	void iotorii_handle_incoming_hello (const addr_t *sender_addr); //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
-	void iotorii_handle_incoming_sethlmac_or_load (const addr_t *sender_address, const uint8_t *packetbuf_ptr_head, uint16_t packetbuf_data_len); //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
+	void iotorii_handle_incoming_hello (addr_t *sender_addr); //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
+	void iotorii_handle_incoming_sethlmac_or_load (addr_t *sender_address, uint8_t *packetbuf_ptr_head, uint16_t packetbuf_data_len); //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
 
 	//MAX PAYLOAD DE LOS MENSAJES SETHLMAC IPv6
 	#ifdef IPv6_MAX_PAYLOAD_CONF
@@ -270,11 +270,20 @@ static int max_payload (void)
 			uint16_t receiver_port,
 			const uint8_t *data,
 			uint16_t datalen){
-		printf("Mensaje recibido por IPv6\n\r");
+
+		addr_t *aux_addr = (addr_t*) malloc (sizeof(addr_t));
+		memcpy(aux_addr, sender_addr, sizeof(addr_t)); //SE COPIA LOAD
+		uint8_t *aux_data = (uint8_t*) malloc (sizeof(uint8_t) * datalen);
+		memcpy(aux_data, data, datalen); //SE COPIA LOAD
+		printf("Mensaje de longitud %d\n\r", datalen);
+		
 		if(datalen==1)
-			iotorii_handle_incoming_hello(sender_addr);
+			iotorii_handle_incoming_hello(aux_addr);
 		else
-			iotorii_handle_incoming_sethlmac_or_load(sender_addr, data, datalen);
+			iotorii_handle_incoming_sethlmac_or_load(aux_addr, aux_data, datalen);
+
+		free(aux_addr);
+		free(aux_data);
 	}
 #endif
 
@@ -575,6 +584,12 @@ static int max_payload (void)
 
 #if IOTORII_IPV6 == 1
 	static void prepare_packet (void *data_ptr, size_t datalen, addr_t *addr){
+		
+	char *sender_ip=(char *) malloc (sizeof(char) * 32);
+	size_t size=32;
+	uiplib_ipaddr_snprint(sender_ip, size, addr);
+	printf("Mensaje enviado a %s\r\n", sender_ip);
+	free(sender_ip);
 		udp_conn.udp_conn->lport=UIP_HTONS(UDP_PORT_SEND);
 		simple_udp_sendto(&udp_conn, data_ptr, datalen, addr);
 	}
@@ -631,7 +646,7 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 	* +-----------+------------+--------+-----+------+-----+-----+------+ -------->*/
 	
 
-	while (datalen_counter < packetbuf_data_len && !addr_cmp(&link_address, &linkaddr_node_addr))
+	while (datalen_counter < packetbuf_data_len && !addr_cmp(&link_address, &node_addr))
 	{
 		if (datalen_counter == 0) //SI ES EL PRIMER RECORD DEL PAYLOAD SE INCLUYE EL PREFIJO Y LA LONGITUD DE ESTE
 		{			
@@ -758,7 +773,7 @@ void iotorii_handle_load_timer ()
 		#else
 			payload_entry_t *payload_entry = (payload_entry_t*) malloc (sizeof(payload_entry_t));
 			payload_entry->next = NULL;
-			payload_entry->payload = (int*) malloc (sizeof(int));
+			payload_entry->payload = (uint8_t*) malloc (sizeof(int));
 			payload_entry->data_len = sizeof(int);
 			memcpy(payload_entry->payload, &(node->load), sizeof(node->load)); //SE COPIA LOAD  
 
@@ -831,10 +846,10 @@ void iotorii_handle_share_upstream_timer ()
 	
 	
 	#if IOTORII_HLMAC_CAST == 1
-		packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
+		// packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA 
 		printf("//INFO HANDLE SHARE UP// Carga actualizada: %d\r\n", node->load);
 		printf("//INFO HANDLE SHARE UP// Carga informada: %d\r\n", extra_load);
-		memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
+		// memcpy(packetbuf_dataptr(), &(extra_load), sizeof(extra_load)); //SE COPIA LOAD  
 		packetbuf_set_datalen(sizeof(extra_load));
 
 		for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
@@ -865,7 +880,7 @@ void iotorii_handle_share_upstream_timer ()
 			}	
 		}
 
-		payload_entry->payload = (short*) malloc (sizeof(short));
+		payload_entry->payload = (uint8_t*) malloc (sizeof(short));
 		memcpy(payload_entry->payload, &extra_load, sizeof(short)); //SE COPIA SHARE
 		payload_entry->data_len = sizeof(short);
 		if(list_head(payload_entry_list) == NULL)
@@ -1051,8 +1066,7 @@ static void iotorii_handle_hello_timer ()
 	#endif
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 	
-	// iotorii_check_neighbours_hello();
-
+	iotorii_check_neighbours_hello();
 	
 	sent_load = 0;
 }
@@ -1114,17 +1128,26 @@ void iotorii_handle_send_message_timer ()
 			}
 		#else
 
-			if(transmission_delay == 1000){
-				ctimer_set(&send_sethlmac_timer, max_transmission_delay() + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
-				list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
-			} else {
-				ctimer_set(&send_sethlmac_timer, transmission_delay + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
-				//SE LIBERA MEMORIA
+			#if IOTORII_IPV6 == 0
+				if(transmission_delay == 1000){
+					ctimer_set(&send_sethlmac_timer, max_transmission_delay() + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
+					list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
+				} else {
+					ctimer_set(&send_sethlmac_timer, transmission_delay + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
+					//SE LIBERA MEMORIA
+					free(payload_entry->payload);
+					payload_entry->payload = NULL;
+					free(payload_entry);
+					payload_entry = NULL;
+				}
+			#else
+
+				ctimer_set(&send_sethlmac_timer, 180 + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
 				free(payload_entry->payload);
 				payload_entry->payload = NULL;
 				free(payload_entry);
 				payload_entry = NULL;
-			}
+			#endif
 		#endif
 	}
 }
@@ -1132,7 +1155,7 @@ void iotorii_handle_send_message_timer ()
 
 void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32_t timestamp)
 {
-	int mac_max_payload = max_payload();
+	int mac_max_payload = max_payl();
 	
 	if (mac_max_payload <= 0) //FRAMING HA FALLADO Y SETHLMAC NO SE PUEDE CREAR
 	   LOG_WARN("output: failed to calculate payload size - SetHLMAC can not be created\r\n");
@@ -1380,7 +1403,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 
 
 #if IOTORII_IPV6 == 1
-void iotorii_handle_incoming_hello (const addr_t *sender_addr) //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
+void iotorii_handle_incoming_hello (addr_t *sender_addr) //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 {
 #else
 void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
@@ -1463,11 +1486,14 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 }
 
 #if IOTORII_IPV6 == 1 
-void iotorii_handle_incoming_sethlmac_or_load (const addr_t *sender_address, const uint8_t *packetbuf_ptr_head, uint16_t packetbuf_data_len) //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
+void iotorii_handle_incoming_sethlmac_or_load (addr_t *sender_address, uint8_t *packetbuf_ptr_head, uint16_t packetbuf_data_len) //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
+{
 #else
 void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
-#endif
 {
+		int packetbuf_data_len = packetbuf_datalen();
+		uint8_t *packetbuf_ptr_head = packetbuf_dataptr();
+#endif
 	LOG_DBG("A message received from ");
 	LOG_DBG_LLADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
 	LOG_DBG("\r\n");
@@ -1500,15 +1526,13 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 	node = list_head(node_list);
 
 	if (hlmac_is_unspecified_addr(*received_hlmac_addr)) //SI NO SE ESPECIFICA DIRECCIÓN, NO HAY PARA EL NODO
-	{				
-		int packetbuf_data_len = packetbuf_datalen();
-
+	{
 		if (packetbuf_data_len == 4) //LOAD
 		{
 			
 			int *p_load = (int *) malloc (sizeof(int));
-			memcpy(p_load, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER 
-			
+			memcpy(p_load, packetbuf_ptr_head, packetbuf_data_len); //COPIA DEL BUFFER 
+
 			char* str_sender = (char*) malloc (sizeof(char) * (ADDR_SIZE * (2 + 1) + 1));
 			addr_to_str (str_sender, &sender_addr, SIZE);	//LENGTH = 1 PARA MOSTRAR SOLO EL ID
 
@@ -1528,7 +1552,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			{
 				if (addr_cmp(&nb->addr, sender)) //SE BUSCA EN LA LISTA DE VECINOS LA DIRECCIÓN QUE HA ENVIADO EL MENSAJE 
 				{
-					memcpy(&nb->load, packetbuf_dataptr(), packetbuf_data_len); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
+					memcpy(&nb->load, packetbuf_ptr_head, packetbuf_data_len); //SE ACTUALIZA LA CARGA EN LA LISTA DE VECINOS						
 					printf("//INFO INCOMING LOAD// carga recibida: %d del nodo 0x%s\r\n", *p_load, str_sender);
 
 					printf("Hijos LOAD: %d    Flag: %d\n\r", n_hijos_load, nb->flag);
@@ -1566,7 +1590,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 		else if (packetbuf_data_len == 2) //SHARE
 		{			
 			short *p_extra = (short *) malloc (sizeof(short));
-			memcpy(p_extra, packetbuf_dataptr(), packetbuf_data_len); //COPIA DEL BUFFER LA CARGA SOBRANTE QUE HA ENVIADO EL NODO
+			memcpy(p_extra, packetbuf_ptr_head, packetbuf_data_len); //COPIA DEL BUFFER LA CARGA SOBRANTE QUE HA ENVIADO EL NODO
 
 			for (nb = list_head(neighbour_table_entry_list); nb != NULL; nb = list_item_next(nb))
 			{
@@ -1598,7 +1622,7 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 								convergence_time = clock_time() - convergence_time;
 								number_times_converged++;
 								printf("Ciclos hasta convergencia: %ld (ms en simulacion)\n\r", convergence_time);
-								printf("Ciclos por segundo: %d\n\r", CLOCK_SECOND);
+								printf("Ciclos por segundo: %ld\n\r", CLOCK_SECOND);
 								printf("Ha realizado un total de %d asignaciones y ha convergido %d veces (%d%%)\n\r", number_of_sethlmac_messages, number_times_converged, (number_times_converged * 100)/number_of_sethlmac_messages);
 								printf("FIN CONVERGENCIA\r\n");
 
@@ -1737,6 +1761,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 			#if IOTORII_HLMAC_CAST == 0
 				n_hijos_load--;
 				n_hijos_share--;
+
+				printf("Faltan %d nodos load y %d nodos share para ser edge\n\r", n_hijos_load, n_hijos_share);
 				
 				if (!number_of_neighbours_flag)
 				{
@@ -1858,6 +1884,8 @@ static void iotorii_handle_sethlmac_timer ()
 	#endif
 	
 	timestamp++;
+	iotorii_neighbours_flag();
+	number_of_neighbours_flag = number_of_neighbours; //SE RESETEA PARA CADA ASIGNACIÓN DE HLMAC
 }
 
 #endif
@@ -1952,11 +1980,11 @@ static void input_packet (void) //SE RECIBE UN PAQUETE
 	{
 		LOG_ERR("failed to parse %u\r\n", packetbuf_datalen());
 	} 
-	else if (!addr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_node_addr) && !packetbuf_holds_broadcast()) //NO COINCIDE LA DIRECCIÓN
+	else if (!linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_node_addr) && !packetbuf_holds_broadcast()) //NO COINCIDE LA DIRECCIÓN
 	{
 		LOG_WARN("not for us\r\n");
 	} 
-	else if (addr_cmp(packetbuf_addr(PACKETBUF_ADDR_SENDER), &linkaddr_node_addr)) //PAQUETE DEL PROPIO NODO
+	else if (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_SENDER), &linkaddr_node_addr)) //PAQUETE DEL PROPIO NODO
 	{
 		LOG_WARN("frame from ourselves\r\n");
 	} 
