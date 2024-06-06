@@ -188,8 +188,8 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 void iotorii_handle_send_message_timer ();
 static void iotorii_handle_statistic_timer ();
 
-clock_time_t hello_start_time = IOTORII_HELLO_START_TIME * CLOCK_SECOND;
-clock_time_t hello_idle_time = IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND;
+clock_time_t hello_start_time;
+clock_time_t hello_idle_time;
 int number_of_neighbours;
 int number_of_neighbours_flag; //PARA COMPROBAR SI EL NODO ES EDGE
 uint32_t last_timestamp = 0;
@@ -251,11 +251,13 @@ static int max_payload (void)
 	void iotorii_handle_incoming_hello (addr_t *sender_addr); //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 	void iotorii_handle_incoming_sethlmac_or_load (addr_t *sender_address, uint8_t *packetbuf_ptr_head, uint16_t packetbuf_data_len); //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
 
+	bool send_correct;
+
 	//MAX PAYLOAD DE LOS MENSAJES SETHLMAC IPv6
 	#ifdef IPv6_MAX_PAYLOAD_CONF
 		#define IPv6_MAX_PAYLOAD IPv6_MAX_PAYLOAD_CONF
 	#else
-		#define IPv6_MAX_PAYLOAD 128 //CAMBIAR EN UN FUTURO
+		#define IPv6_MAX_PAYLOAD 128 //TODO: CAMBIAR EN UN FUTURO
 	#endif
 
 	#define UDP_PORT_LISTEN	8765
@@ -584,14 +586,8 @@ static int max_payload (void)
 
 #if IOTORII_IPV6 == 1
 	static void prepare_packet (void *data_ptr, size_t datalen, addr_t *addr){
-		
-	char *sender_ip=(char *) malloc (sizeof(char) * 32);
-	size_t size=32;
-	uiplib_ipaddr_snprint(sender_ip, size, addr);
-	printf("Mensaje enviado a %s\r\n", sender_ip);
-	free(sender_ip);
 		udp_conn.udp_conn->lport=UIP_HTONS(UDP_PORT_SEND);
-		simple_udp_sendto(&udp_conn, data_ptr, datalen, addr);
+		send_correct = (bool) simple_udp_sendto(&udp_conn, data_ptr, datalen, addr);
 	}
 
 #else
@@ -645,27 +641,23 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 	* | Timestamp | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
 	* +-----------+------------+--------+-----+------+-----+-----+------+ -------->*/
 	
+	packetbuf_ptr+=sizeof(uint32_t); //SE IGNORA EL CAMPO TIMESTAMP
+	datalen_counter+=sizeof(uint32_t); //SE IGNORA EL CAMPO TIMESTAMP
+	
+	prefix = (hlmacaddr_t*) malloc (sizeof(hlmacaddr_t)); //SE RESERVA MEMORIA PARA EL PREFIJO
+	memcpy(&prefix->len, packetbuf_ptr, 1); //COPIA LONGITUD PREFIJO DEL VECINO
+	
+	packetbuf_ptr++;
+	datalen_counter++;
+
+	prefix->address = (uint8_t*) malloc (sizeof(uint8_t) * prefix->len); //COPIA PREFIJO DEL VECINO
+	memcpy(prefix->address, packetbuf_ptr, prefix->len);
+	
+	packetbuf_ptr += prefix->len;
+	datalen_counter += prefix->len;
 
 	while (datalen_counter < packetbuf_data_len && !addr_cmp(&link_address, &node_addr))
 	{
-		if (datalen_counter == 0) //SI ES EL PRIMER RECORD DEL PAYLOAD SE INCLUYE EL PREFIJO Y LA LONGITUD DE ESTE
-		{			
-			packetbuf_ptr+=sizeof(uint32_t); //SE IGNORA EL CAMPO TIMESTAMP
-			datalen_counter+=sizeof(uint32_t); //SE IGNORA EL CAMPO TIMESTAMP
-			
-			prefix = (hlmacaddr_t*) malloc (sizeof(hlmacaddr_t)); //SE RESERVA MEMORIA PARA EL PREFIJO
-			memcpy(&prefix->len, packetbuf_ptr, 1); //COPIA LONGITUD PREFIJO DEL VECINO
-			
-			packetbuf_ptr++;
-			datalen_counter++;
-
-			prefix->address = (uint8_t*) malloc (sizeof(uint8_t) * prefix->len); //COPIA PREFIJO DEL VECINO
-			memcpy(prefix->address, packetbuf_ptr, prefix->len);
-			
-			packetbuf_ptr += prefix->len;
-			datalen_counter += prefix->len;
-		}
-		
 		memcpy(&id, packetbuf_ptr, 1); //COPIA ID DEL VECINO
 		
 		packetbuf_ptr++;
@@ -1064,6 +1056,7 @@ static void iotorii_handle_hello_timer ()
 		//SE PLANIFICA MENSAJE SETHLMAC EN CASO DE SER ROOT
 		ctimer_set(&sethlmac_timer, (random_rand() % IOTORII_SETHLMAC_START_TIME) + (IOTORII_SETHLMAC_START_TIME * CLOCK_SECOND), iotorii_handle_sethlmac_timer, NULL);
 	#endif
+	hello_idle_time = (IOTORII_HELLO_IDLE_TIME * CLOCK_SECOND - IOTORII_HELLO_IDLE_TIME) + (random_rand() % (IOTORII_HELLO_IDLE_TIME * 2));
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 	
 	iotorii_check_neighbours_hello();
@@ -1124,7 +1117,7 @@ void iotorii_handle_send_message_timer ()
 				// ctimer_set(&send_sethlmac_timer, sethlmac_delay_time, iotorii_handle_send_message_timer, NULL);
 				//iotorii_handle_send_message_timer();
 				// ctimer_set(&send_sethlmac_timer, max_transmission_delay()+1, iotorii_handle_send_message_timer, NULL);
-				ctimer_set(&send_sethlmac_timer, transmission_delay + 10, iotorii_handle_send_message_timer, NULL);
+				ctimer_set(&send_sethlmac_timer, max_transmission_delay() + 10, iotorii_handle_send_message_timer, NULL);
 			}
 		#else
 
@@ -1142,11 +1135,16 @@ void iotorii_handle_send_message_timer ()
 				}
 			#else
 
-				ctimer_set(&send_sethlmac_timer, 180 + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
-				free(payload_entry->payload);
-				payload_entry->payload = NULL;
-				free(payload_entry);
-				payload_entry = NULL;
+				if(!send_correct){
+					ctimer_set(&send_sethlmac_timer, max_transmission_delay()/2 + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
+					free(payload_entry->payload);
+					payload_entry->payload = NULL;
+					free(payload_entry);
+					payload_entry = NULL;
+				} else {
+					ctimer_set(&send_sethlmac_timer, max_transmission_delay() + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
+					list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
+				}
 			#endif
 		#endif
 	}
@@ -1711,8 +1709,11 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 					while(list_head(node_list) != NULL){
 						new_address = list_chop(node_list);
 						free(new_address->str_addr);
+						new_address->str_addr = NULL;
 						free(new_address->str_top_addr);
+						new_address->str_top_addr = NULL;
 						free(new_address);
+						new_address = NULL;
 					}
 				}
 
@@ -1733,6 +1734,11 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 				LOG_DBG("New HLMAC address is assigned to the node.\r\n");
 				LOG_DBG("New HLMAC address is sent to the neighbours.\r\n");
 				iotorii_send_sethlmac(*received_hlmac_addr, sender_addr, timestamp); //SE ENVÍA A LOS DEMÁS NODOS
+			
+				free(received_hlmac_addr->address);
+				received_hlmac_addr->address = NULL;
+				free(received_hlmac_addr);
+				received_hlmac_addr = NULL;
 			}
 			else //NO SE HA ASIGNADO
 			{
@@ -1931,7 +1937,7 @@ static void init (void)
 		#endif
 
 		//SE PLANIFICA MENSAJE HELLO
-		hello_start_time = (hello_start_time - IOTORII_HELLO_START_TIME) + (random_rand() % (IOTORII_HELLO_START_TIME * 2));
+		hello_start_time = (IOTORII_HELLO_START_TIME * CLOCK_SECOND - IOTORII_HELLO_START_TIME) + (random_rand() % (IOTORII_HELLO_START_TIME * 2));
 		LOG_DBG("Scheduling a Hello message after %u ticks in the future\r\n", (unsigned)hello_start_time);
 		ctimer_set(&hello_timer, hello_start_time, iotorii_handle_hello_timer, NULL);
 
