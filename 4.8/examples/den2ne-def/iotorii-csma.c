@@ -1070,8 +1070,8 @@ void iotorii_handle_send_message_timer ()
 	payload_entry_t *payload_entry;
 	payload_entry = list_pop(payload_entry_list); //POP PACKETBUF DE LA COLA
 	
-	if (payload_entry) //EXISTE LA ENTRADA PAYLOAD
-	{
+	// if (payload_entry) //EXISTE LA ENTRADA PAYLOAD
+	// {
 		//SE PREPARA EL BUFFER DE PAQUETES		
 		// packetbuf_clear(); //SE RESETEA EL BUFFER 
 		
@@ -1126,7 +1126,8 @@ void iotorii_handle_send_message_timer ()
 					ctimer_set(&send_sethlmac_timer, max_transmission_delay() + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
 					list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
 				} else {
-					ctimer_set(&send_sethlmac_timer, transmission_delay + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
+					if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
+						ctimer_set(&send_sethlmac_timer, transmission_delay + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
 					//SE LIBERA MEMORIA
 					free(payload_entry->payload);
 					payload_entry->payload = NULL;
@@ -1135,19 +1136,21 @@ void iotorii_handle_send_message_timer ()
 				}
 			#else
 
-				if(!send_correct){
-					ctimer_set(&send_sethlmac_timer, max_transmission_delay()/2 + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
+				if(send_correct){
+					ctimer_set(&send_sethlmac_timer, max_transmission_delay() + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
+					list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
+				
+				} else {
+					if (list_head(payload_entry_list)) //SI LA LISTA TIENE UNA ENTRADA 
+						ctimer_set(&send_sethlmac_timer, max_transmission_delay()/2 + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
 					free(payload_entry->payload);
 					payload_entry->payload = NULL;
 					free(payload_entry);
 					payload_entry = NULL;
-				} else {
-					ctimer_set(&send_sethlmac_timer, max_transmission_delay() + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
-					list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
 				}
 			#endif
 		#endif
-	}
+	// }
 }
 
 

@@ -126,6 +126,9 @@ uint8_t hlmactable_has_loop (const hlmacaddr_t addr)
 		addr_str = NULL;
 		#endif
 		
+		free(longest_prefix->address);
+		longest_prefix->address = NULL;
+		
 		free(longest_prefix);
 		longest_prefix = NULL;
 		return 0;

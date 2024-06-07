@@ -149,9 +149,9 @@ uint8_t get_addr_index_value (const hlmacaddr_t addr, const uint8_t k)
 		return addr.address[k]; 
 	else //ERROR DE ÍNDICE
 	{
-		const char *addr_str = hlmac_addr_to_str(addr);
+		char *addr_str = hlmac_addr_to_str(addr);
 		LOG_ERR("get_addr_index_value(): index %d is out of range %s", k, addr_str);
-		//free(addr_str); // \fexme const => err, leakage?
+		free(addr_str); // \fexme const => err, leakage?
 		return 0; 
 	}
 }
