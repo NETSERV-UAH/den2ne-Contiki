@@ -2072,7 +2072,7 @@ void list_this_node_entry (payload_entry_t *a, hlmacaddr_t *addr)
 	this_node_t *new_address;
 	
 	char* str_addr = hlmac_addr_to_str(*addr);
-	char* str_top_addr = (char*) malloc (20);
+	char* str_top_addr = (char*) malloc ((addr->len-1)*3 * sizeof(char));
 
 	if (addr->len > 1)
 		strncpy(str_top_addr, str_addr, (addr->len-1)*3); //COPIA HASTA EL PENÚLTIMO ID
