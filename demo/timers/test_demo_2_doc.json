@@ -1,0 +1,74 @@
+{"Node" : [{
+                "MAC"      :    "f222.0002.0002.0002",   "Type"     :    "Common",
+                "Message"  :    [{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "Hello"
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "Hello"
+                },{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "SetHLMAC",
+                        "Content" :
+		                {"Timestamp"  :  "0",  "Prefix"     :  "01",
+		                "HLMAC"      :	{"f222.0002.0002.0002" : "01"}}
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "INFO",	  "Content" :	"HLMAC added",
+                        "Value"	  :	"01.01",  "Timestamp":    "0"
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "INFO",
+                        "Content" :	"Edge",   "Timestamp":    "0"
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "Load",   "Value"   :	"31"
+                },{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "Load",   "Value"   :     "112"
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "Share",  "Value"   :     "-69"
+                },{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "Hello"
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "Hello"
+                }]
+        },{
+                "MAC"      :    "f111.0001.0001.0001",  "Type"     :    "Root",
+                "Message"  :    [{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "Hello"
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "Hello"
+                },{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "INFO",   "Content" :	"HLMAC added",
+                        "Value"	  :	"01",     "Timestamp":    "0"
+                },{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "SetHLMAC",
+                        "Content" :
+                        {"Timestamp"  :  "0",   "Prefix"     :  "01",
+                         "HLMAC"      :	{"f222.0002.0002.0002" : "01"}}
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "Load",    "Value"   :     "31"
+                },{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "Load",    "Value"   :     "112"
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "Share",   "Value"   :     "-69"
+                },{
+                        "Origin"  :     "f111.0001.0001.0001",
+                        "Type"    :     "Hello"
+                },{
+                        "Origin"  :     "f222.0002.0002.0002",
+                        "Type"    :     "Hello"
+                }]
+        }]
+}

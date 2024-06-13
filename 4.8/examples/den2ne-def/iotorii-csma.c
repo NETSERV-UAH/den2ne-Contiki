@@ -135,6 +135,9 @@ PARA QUE NO INTERFIERA CON EL SEGUNDO PASO DE ENVÍOS DE CARGA (NODOS NO EDGE) E
 		#if IOTORII_HLMAC_CAST == 0
 			addr_t dest;
 		#endif
+		#if IOTORII_IPV6 == IOTORII_ICMP
+			uint16_t code;
+		#endif
 	};
 
 	typedef struct payload_entry payload_entry_t;
@@ -239,14 +242,7 @@ static int max_payload (void)
 
 /*---------------------------------------------------------------------------*/
 
-#if IOTORII_IPV6 == 1 //IPv6
-	#include "net/netstack.h"
-	#include "net/routing/routing.h"
-	#include "net/ipv6/simple-udp.h"
-
-	#include "net/ipv6/uip-ds6.h"
-	#include "net/ipv6/uiplib.h"
-	#include "net/ipv6/uip.h"
+#if IOTORII_IPV6 == IOTORII_UDP
 
 	void iotorii_handle_incoming_hello (addr_t *sender_addr); //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 	void iotorii_handle_incoming_sethlmac_or_load (addr_t *sender_address, uint8_t *packetbuf_ptr_head, uint16_t packetbuf_data_len); //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
@@ -287,6 +283,24 @@ static int max_payload (void)
 		free(aux_addr);
 		free(aux_data);
 	}
+#endif
+
+#if IOTORII_IPV6 == IOTORII_ICMP
+	#define IOTORII_CODE_HELLO		0x00
+	#define IOTORII_CODE_SETHLMAC	0x01
+	#define IOTORII_CODE_LOAD		0x02
+	#define IOTORII_CODE_SHARE		0x03
+
+	addr_t broad_ipaddr;
+
+	void iotorii_handle_incoming_hello (void); //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
+	void iotorii_handle_incoming_sethlmac_or_load (void); //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
+
+	UIP_ICMP6_HANDLER(hello_handler, ICMP6_PRIV_EXP_100, IOTORII_CODE_HELLO, iotorii_handle_incoming_hello);
+	UIP_ICMP6_HANDLER(sethlmac_handler, ICMP6_PRIV_EXP_100, IOTORII_CODE_SETHLMAC, iotorii_handle_incoming_sethlmac_or_load);
+	UIP_ICMP6_HANDLER(load_handler, ICMP6_PRIV_EXP_100, IOTORII_CODE_LOAD, iotorii_handle_incoming_sethlmac_or_load);
+	UIP_ICMP6_HANDLER(share_handler, ICMP6_PRIV_EXP_100, IOTORII_CODE_SHARE, iotorii_handle_incoming_sethlmac_or_load);
+
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -584,12 +598,19 @@ static int max_payload (void)
 #endif
 
 
-#if IOTORII_IPV6 == 1
+#if IOTORII_IPV6 == IOTORII_UDP
 	static void prepare_packet (void *data_ptr, size_t datalen, addr_t *addr){
 		udp_conn.udp_conn->lport=UIP_HTONS(UDP_PORT_SEND);
 		send_correct = (bool) simple_udp_sendto(&udp_conn, data_ptr, datalen, addr);
 	}
 
+#else
+#if IOTORII_IPV6 == IOTORII_ICMP
+	static void prepare_packet (void *data_ptr, size_t datalen, addr_t *addr, uint16_t code){
+		memcpy(UIP_ICMP_PAYLOAD, data_ptr, datalen);
+		printf("Entra envío\n\r");
+		uip_icmp6_send(addr, ICMP6_PRIV_EXP_100, code, datalen);
+	}
 #else
 	static void prepare_packet (void *data_ptr, size_t datalen, addr_t *addr){
 		packetbuf_clear(); //SE PREPARA EL BUFFER DE PAQUETES Y SE RESETEA
@@ -599,6 +620,7 @@ static int max_payload (void)
 		send_packet(NULL, NULL);
 	}
 #endif
+#endif
 
 extern clock_time_t transmission_delay;
 
@@ -606,7 +628,7 @@ extern clock_time_t transmission_delay;
 
 #if IOTORII_NODE_TYPE > 0 //ROOT O NODO COMÚN
 
-#if IOTORII_IPV6 == 1 
+#if IOTORII_IPV6 != NO_IPV6
 hlmacaddr_t *iotorii_extract_address (addr_t *sender_addr, uint8_t *packetbuf_ptr_head, uint16_t packetbuf_data_len) //SE EXTRAE LA DIRECCIÓN DEL NODO EMISOR A PARTIR DEL PAQUETE RECIBIDO
 {
 	addr_t node_addr;	//DIRECCIÓN IP DEL PROCESO NATIVO
@@ -616,6 +638,7 @@ hlmacaddr_t *iotorii_extract_address (addr_t *sender_addr, uint8_t *packetbuf_pt
 	addr_t link_address;
 	uip_ip6addr(&link_address, 0,0,0,0,0,0,0,0);
 #else
+
 hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO EMISOR A PARTIR DEL PAQUETE RECIBIDO
 {
 	int packetbuf_data_len = packetbuf_datalen();
@@ -669,7 +692,7 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 		datalen_counter += ADDR_SIZE;
 	} 
 	
-#if IOTORII_IPV6 == 0
+#if IOTORII_IPV6 == NO_IPV6
 	free(packetbuf_ptr_head); //SE LIBERA MEMORIA
 	packetbuf_ptr_head = NULL;
 #endif
@@ -684,7 +707,7 @@ hlmacaddr_t *iotorii_extract_address (void) //SE EXTRAE LA DIRECCIÓN DEL NODO E
 	return prefix;
 }
 
-#if IOTORII_IPV6 == 1 
+#if IOTORII_IPV6 != NO_IPV6
 uint32_t iotorii_extract_timestamp (uint8_t *packetbuf_ptr_head) //SE EXTRAE EL TIMESTAMP A PARTIR DEL PAQUETE RECIBIDO
 {
 #else
@@ -707,7 +730,7 @@ uint32_t iotorii_extract_timestamp (void) //SE EXTRAE EL TIMESTAMP A PARTIR DEL 
 	* | Timestamp | Prefix len | Prefix | ID1 | MAC1 | ... | IDn | MACn |
 	* +-----------+------------+--------+-----+------+-----+-----+------+ -------->*/
 
-#if IOTORII_IPV6 == 0
+#if IOTORII_IPV6 == NO_IPV6
 	free(packetbuf_ptr_head);
 #endif	
 
@@ -755,7 +778,7 @@ void iotorii_handle_load_timer ()
 						printf("%02x", nb->addr.u8[i]);
 					}
 					printf("\n\r");
-					prepare_packet(&(node->load), sizeof(node->load), &(nb->addr));
+					prepare_packet(&(node->load), sizeof(node->load), &(nb->addr), IOTORII_CODE_LOAD);
 					// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
 				}	
 			}
@@ -852,7 +875,7 @@ void iotorii_handle_share_upstream_timer ()
 										
 				// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 				// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(nb->addr));
-				prepare_packet(&(extra_load), sizeof(extra_load), &(nb->addr));
+				prepare_packet(&(extra_load), sizeof(extra_load), &(nb->addr), IOTORII_CODE_SHARE);
 			}	
 		}
 		// send_packet(NULL, NULL, NULL);
@@ -1025,11 +1048,15 @@ static void iotorii_handle_hello_timer ()
 		update_mem_counter();
 	#endif
 
-	#if IOTORII_IPV6 == 1 //IPv6
+	#if IOTORII_IPV6 == IOTORII_UDP
 		udp_conn.udp_conn->lport=UIP_HTONS(UDP_PORT_SEND);
 		simple_udp_sendto(&udp_conn, "h", strlen("h"), &broad_ipaddr);
 		LOG_DBG("Hello prepared to send\r\n");
 		printf("//INFO HANDLE HELLO// Mensaje Hello enviado con IPv6\r\n");
+
+	#else
+	#if IOTORII_IPV6 == IOTORII_ICMP
+		uip_icmp6_send(&broad_ipaddr, ICMP6_PRIV_EXP_100, IOTORII_CODE_HELLO, 0);
 		
 	#else
 		int mac_max_payload = max_payload();
@@ -1046,6 +1073,7 @@ static void iotorii_handle_hello_timer ()
 			printf("//INFO HANDLE HELLO// Mensaje Hello enviado sin IPv6\r\n");
 		}
 	#endif
+	#endif
 	
 	printf("//INFO HANDLE HELLO// Mensaje Hello enviado\r\n");
 	#if LOG_DBG_STATISTIC == 1
@@ -1060,8 +1088,6 @@ static void iotorii_handle_hello_timer ()
 	ctimer_set(&hello_timer, hello_idle_time, iotorii_handle_hello_timer, NULL);
 	
 	iotorii_check_neighbours_hello();
-	
-	sent_load = 0;
 }
 
 
@@ -1083,10 +1109,14 @@ void iotorii_handle_send_message_timer ()
 		//Control info: the destination address, the broadcast address, is tagged to the outbound packet
 		#if IOTORII_HLMAC_CAST == 1
 			// packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-			#if IOTORII_IPV6 == 1
+			#if IOTORII_IPV6 == IOTORII_UDP
 				prepare_packet (payload_entry->payload, payload_entry->data_len, &broad_ipaddr);
 			#else
+			#if IOTORII_IPV6 == IOTORII_ICMP
+				prepare_packet (payload_entry->payload, payload_entry->data_len, &broad_ipaddr, payload_entry->code);
+			#else
 				prepare_packet (payload_entry->payload, payload_entry->data_len, &linkaddr_null);
+			#endif
 			#endif
 		#else
 			prepare_packet (payload_entry->payload, payload_entry->data_len, &(payload_entry->dest));
@@ -1121,7 +1151,7 @@ void iotorii_handle_send_message_timer ()
 			}
 		#else
 
-			#if IOTORII_IPV6 == 0
+			#if IOTORII_IPV6 == NO_IPV6
 				if(transmission_delay == 1000){
 					ctimer_set(&send_sethlmac_timer, max_transmission_delay() + random_rand() % IOTORII_MAX_DELAY, iotorii_handle_send_message_timer, NULL);
 					list_push(payload_entry_list, payload_entry); //SI NO SE ALOJA BIEN EL MENSAJE SE VUELVE A AÑADIR A LA LISTA
@@ -1183,6 +1213,8 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 				#endif
 			}
 		}
+
+		printf("%d\n\r", number_of_neighbours_new);
 
 		if (number_of_neighbours_new > 0)
 		{
@@ -1271,6 +1303,7 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 					datalen_counter += ADDR_SIZE;
 
 					i++;
+					printf("programa envío\n\r");
 				#if IOTORII_HLMAC_CAST == 1
 				} while (mac_max_payload >= (datalen_counter + ADDR_SIZE + 1) && i <= number_of_neighbours_new);
 				#endif
@@ -1280,6 +1313,9 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 				payload_entry->next = NULL;
 				payload_entry->payload = packetbuf_ptr_head;
 				payload_entry->data_len = datalen_counter;
+				#if IOTORII_IPV6 == IOTORII_ICMP
+					payload_entry->code = IOTORII_CODE_SETHLMAC;
+				#endif
 				#if IOTORII_HLMAC_CAST == 0
 					payload_entry->dest = random_list[i-2]->addr;
 					printf("Destino: ");
@@ -1403,9 +1439,15 @@ void iotorii_send_sethlmac (hlmacaddr_t addr, addr_t sender_link_address, uint32
 
 
 
-#if IOTORII_IPV6 == 1
+#if IOTORII_IPV6 == IOTORII_UDP
 void iotorii_handle_incoming_hello (addr_t *sender_addr) //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 {
+#else
+#if IOTORII_IPV6 == IOTORII_ICMP
+void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
+{
+	addr_t *sender_addr = (addr_t *) malloc(sizeof(addr_t));
+	memcpy(sender_addr, &UIP_IP_BUF->srcipaddr, sizeof(addr_t)); //SE LEE EL BUFFER
 #else
 void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) RECIBIDO DE OTROS NODOS
 {
@@ -1414,6 +1456,7 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 	LOG_DBG("A Hello message received from ");
 	LOG_DBG_LLADDR(sender_addr);
 	LOG_DBG("\r\n");
+#endif
 #endif
 
 	#if IOTORII_NRF52840_LOG == 1
@@ -1466,7 +1509,7 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 			
 			list_add(neighbour_table_entry_list, new_nb); //SE AÑADE A LA LISTA
 			
-			#if IOTORII_IPV6 == 0 
+			#if IOTORII_IPV6 == NO_IPV6 
 				LOG_DBG("A new neighbour added to IoTorii neighbour table, address: ");
 				LOG_DBG_LLADDR(sender_addr);
 				LOG_DBG(", ID: %d\r\n", new_nb->number_id);
@@ -1474,7 +1517,7 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 		}
 		else
 		{
-			#if IOTORII_IPV6 == 0 
+			#if IOTORII_IPV6 == NO_IPV6 
 				LOG_DBG("Address of hello (");
 				LOG_DBG_LLADDR(sender_addr);
 				LOG_DBG(") message received already!\r\n");
@@ -1484,31 +1527,52 @@ void iotorii_handle_incoming_hello () //PROCESA UN PAQUETE HELLO (DE DIFUSIÓN) 
 	}
 	else //TABLA LLENA (256)
 		LOG_WARN("The IoTorii neighbour table is full! \r\n");
+
+	#if IOTORII_IPV6 == IOTORII_ICMP
+		uipbuf_clear();
+	#endif
 }
 
-#if IOTORII_IPV6 == 1 
+#if IOTORII_IPV6 == IOTORII_UDP
 void iotorii_handle_incoming_sethlmac_or_load (addr_t *sender_address, uint8_t *packetbuf_ptr_head, uint16_t packetbuf_data_len) //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
+{
+#else
+#if IOTORII_IPV6 == IOTORII_ICMP
+void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
 {
 #else
 void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSIÓN SETHLMAC RECIBIDO DE OTROS NODOS
 {
 		int packetbuf_data_len = packetbuf_datalen();
 		uint8_t *packetbuf_ptr_head = packetbuf_dataptr();
+		LOG_DBG("A message received from ");
+		LOG_DBG_LLADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
+		LOG_DBG("\r\n");
 #endif
-	LOG_DBG("A message received from ");
-	LOG_DBG_LLADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
-	LOG_DBG("\r\n");
+#endif
 
 	hlmacaddr_t *received_hlmac_addr;
 
-	#if IOTORII_IPV6 == 1
+	#if IOTORII_IPV6 == IOTORII_UDP
 		received_hlmac_addr = iotorii_extract_address(sender_address, packetbuf_ptr_head, packetbuf_data_len); //SE COGE LA DIRECCIÓN RECIBIDA
 		uint32_t timestamp = iotorii_extract_timestamp(packetbuf_ptr_head); //SE COGE EL TIMESTAMP RECIBIDA
 		addr_t sender_addr = *sender_address;
 	#else
+	#if IOTORII_IPV6 == IOTORII_ICMP
+		addr_t *sender_address = (addr_t *) malloc(sizeof(addr_t));
+		*sender_address = UIP_IP_BUF->srcipaddr; //SE LEE EL BUFFER
+		addr_t sender_addr = *sender_address;
+		uint16_t packetbuf_data_len = UIP_IP_BUF->len;
+		uint8_t *packetbuf_ptr_head = UIP_ICMP_PAYLOAD;
+
+		received_hlmac_addr = iotorii_extract_address(sender_address, packetbuf_ptr_head, packetbuf_data_len); //SE COGE LA DIRECCIÓN RECIBIDA
+		uint32_t timestamp = iotorii_extract_timestamp(packetbuf_ptr_head); //SE COGE EL TIMESTAMP RECIBIDA
+
+	#else
 		received_hlmac_addr = iotorii_extract_address(); //SE COGE LA DIRECCIÓN RECIBIDA
 		uint32_t timestamp = iotorii_extract_timestamp(); //SE COGE EL TIMESTAMP RECIBIDA
 		addr_t sender_addr = *packetbuf_addr(PACKETBUF_ADDR_SENDER);
+	#endif
 	#endif
 	
 	const addr_t *sender = &sender_addr;
@@ -1718,6 +1782,8 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 						free(new_address);
 						new_address = NULL;
 					}
+	
+					sent_load = 0;
 				}
 
 				#if IOTORII_NRF52840_LOG == 1
@@ -1825,10 +1891,14 @@ void iotorii_handle_incoming_sethlmac_or_load () //PROCESA UN MENSAJE DE DIFUSI�
 	// #if LOG_DBG_STATISTIC == 1
 	// 	printf("Periodic Statistics: node_id: %u, convergence_time_end\r\n", node_id);
 	// #endif
+
+	#if IOTORII_IPV6 == IOTORII_ICMP
+		uipbuf_clear();
+	#endif
 }
 
 
-#if IOTORII_IPV6 == 0 //No IPv6
+#if IOTORII_IPV6 == NO_IPV6 //No IPv6
 void iotorii_operation (void)
 {
 	printf("Longitud: %d\n\r", packetbuf_datalen());
@@ -1873,7 +1943,7 @@ static void iotorii_handle_sethlmac_timer ()
 	// #endif
 	
 	addr_t node_addr;
-	#if IOTORII_IPV6 == 1 
+	#if IOTORII_IPV6 != NO_IPV6
 		uip_ds6_select_src(&node_addr, &broad_ipaddr);    //DIRECCIÓN IP DEL PROCESO NATIVO
 	#else
 		node_addr = linkaddr_node_addr;
@@ -1920,12 +1990,28 @@ static void init (void)
 		LOG_INFO("This node operates as a common node.\r\n ");
 	#endif
 
-	#if IOTORII_IPV6 == 1 //IPv6
+	#if IOTORII_IPV6 == IOTORII_UDP
   		uip_ip6addr(&broad_ipaddr, 0xFF03,0,0,0,0,0,0,0xFC);
 		if(!simple_udp_register(&udp_conn, UDP_PORT_LISTEN, NULL, UDP_PORT_SEND, udp_rx_callback)){
 			LOG_DBG("Error when registering callback function\r\n");
 		}
 		udp_conn.udp_conn->ttl=10;
+
+		// uip_icmp6_input_handler_t *hello = (uip_icmp6_input_handler_t *) malloc(sizeof(uip_icmp6_input_handler_t));
+		// hello->next = NULL;
+		// hello->type = ICMP6_PRIV_EXP_100;
+		// hello->icode = 0x00;
+		// hello->handler = &iotorii_handle_incoming_hello;
+
+	#else
+	#if IOTORII_IPV6 == IOTORII_ICMP
+  		uip_ip6addr(&broad_ipaddr, 0xFF03,0,0,0,0,0,0,0xFC);
+
+		uip_icmp6_register_input_handler(&hello_handler);
+		uip_icmp6_register_input_handler(&sethlmac_handler);
+		uip_icmp6_register_input_handler(&load_handler);
+		uip_icmp6_register_input_handler(&share_handler);
+	#endif
 	#endif
 	
 	#if IOTORII_NODE_TYPE > 0 //ROOT O NODO COMÚN
@@ -2032,7 +2118,7 @@ static void input_packet (void) //SE RECIBE UN PAQUETE
 
 			#if IOTORII_IPV6 == 1
 				NETSTACK_NETWORK.input();
-			#elif IOTORII_IPV6 == 0
+			#elif IOTORII_IPV6 == NO_IPV6
 				iotorii_operation();
 			#endif
 		}

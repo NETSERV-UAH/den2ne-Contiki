@@ -207,8 +207,8 @@ def main():
     win.setBackground("white")
     # draw_next(win)
 
-    #data = json_file("prueba_demo_4_2.json")
-    data = json_file("timers/test_demo_7.json")
+    data = json_file("timers/test_demo_2.json")
+    #data = json_file("timers/test_demo_7.json")
     #data = json_file("prueba_demo_4_mesh.json")
 
 
@@ -442,13 +442,15 @@ def main():
                     share_nodes = share_nodes_next.copy()
                     share_nodes_next.clear()
                     if share_done == 0:
-                        # if time == 0:
-                        #     convergence_text = Text(Point(100, 60+25*len(node)), "Convergence time: " + str(convergence_time) + "s")
-                        #     convergence_text.draw(win)
-                        # else:
-                        #     convergence_text.undraw()
-                        #     convergence_text = Text(Point(100, 60+25*len(node)), "Convergence time: " + str(convergence_time) + "s")
-                        #     convergence_text.draw(win)
+                        if convergence_time != 0:
+                            if time == 0:
+                                convergence_text = Text(Point(100, 60+25*len(data['Node'])), "Convergence time: " + str(convergence_time) + "s")
+                                convergence_text.draw(win)
+                            else:
+                                convergence_text.undraw()
+                                convergence_text = Text(Point(100, 60+25*len(data['Node'])), "Convergence time: " + str(convergence_time) + "s")
+                                convergence_text.draw(win)
+                            convergence_time = 0
                         key = win.getKey()
                         while key != "n":
                             key = win.getKey()
