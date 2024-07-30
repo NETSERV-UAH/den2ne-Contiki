@@ -1,0 +1,189 @@
+{
+	"Node" : [
+    {
+        "MAC"      :    "f4ce.36cc.ade2.3163",
+        "Type"     :    "Common",
+        "Message"  :    [
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Hello"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "Hello"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "SetHLMAC",
+                "Content" :
+                {
+                        "Timestamp"  :  "0",
+                        "Prefix"     :  "01",
+                        "HLMAC"      :
+                                {
+                                        "f4ce.36cc.ade2.3163" :       "01"
+                                }
+                }
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "INFO",
+                "Content" :     "HLMAC added",
+                "Value"   :     "01.01",
+                "Timestamp"   : "0"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "INFO",
+                "Content" :     "Edge"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Load",
+                "Value"   :     "155"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Share",
+                "Value"   :     "55"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Hello"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "Hello"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "SetHLMAC",
+                "Content" :
+                {
+                        "Timestamp"  :  "1",
+                        "Prefix"     :  "01",
+                        "HLMAC"      :
+                                {
+                                        "f4ce.36cc.ade2.3163" :       "01"
+                                }
+                }
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "INFO",
+                "Content" :     "HLMAC added",
+                "Value"   :     "01.01",
+                "Timestamp"   : "1"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "INFO",
+                "Content" :     "Edge"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Load",
+                "Value"   :     "29"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Share",
+                "Value"   :     "-71"
+        }
+        ]
+    },{
+        "MAC"      :    "f4ce.36e6.38b4.a941",
+        "Type"     :    "Root",
+        "Message"  :    [
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Hello"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "Hello"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "INFO",
+                "Content" :     "HLMAC added",
+                "Value"   :     "01",
+                "Timestamp"   : "0"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "SetHLMAC",
+                "Content" :
+                {
+                        "Timestamp"  :  "0",
+                        "Prefix"     :  "01",
+                        "HLMAC"      :
+                                {
+                                        "f4ce.36cc.ade2.3163" :       "01"
+                                }
+                }
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Load",
+                "Value"   :     "155"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "INFO",
+                "Content" :     "Convergence",
+                "Value"   :     "123"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Share",
+                "Value"   :     "55"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Hello"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "Hello"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "INFO",
+                "Content" :     "HLMAC added",
+                "Value"   :     "01",
+                "Timestamp"   : "1"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "SetHLMAC",
+                "Content" :
+                {
+                        "Timestamp"  :  "1",
+                        "Prefix"     :  "01",
+                        "HLMAC"      :
+                                {
+                                        "f4ce.36cc.ade2.3163" :       "01"
+                                }
+                }
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Load",
+                "Value"   :     "29"
+        },
+        {
+                "Origin"  :     "f4ce.36e6.38b4.a941",
+                "Type"    :     "INFO",
+                "Content" :     "Convergence",
+                "Value"   :     "125"
+        },
+        {
+                "Origin"  :     "f4ce.36cc.ade2.3163",
+                "Type"    :     "Share",
+                "Value"   :     "-71"
+        }
+        ]
+    }
+    ]
+}

@@ -68,26 +68,27 @@ def arrow_text(arrow, message, mac):
     else:
         if arrow.getP1().getY() - arrow.getP2().getY() > 0:                             #UPWARDS
             if (message['Type'] == "SetHLMAC"):
-                desfaseX = 60
+                desfaseX = 40
                 desfaseY = 15
             else:
                 desfaseX = 20
                 desfaseY = 0
         else:                                                                           #DOWNWARDS
             if (message['Type'] == "SetHLMAC"):
-                desfaseX = -60
+                desfaseX = -40
                 desfaseY = -15
             else:
                 desfaseX = -20
                 desfaseY = 0
     if (message['Type'] == "Hello"):
-        return Text(Point(arrow.getCenter().getX()-abs(desfaseX), arrow.getCenter().getY()-abs(desfaseY)), message['Type'])
+        # return Text(Point(arrow.getCenter().getX()-abs(desfaseX), arrow.getCenter().getY()-abs(desfaseY)), message['Type'])
+        return Text(Point(arrow.getCenter().getX()-abs(desfaseX), arrow.getCenter().getY()-abs(desfaseY)), "")
     elif (message['Type'] == "SetHLMAC"):
-        return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message['Content']['Prefix'] + '.' + message['Content']['HLMAC'][mac])
+        return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Content']['Prefix'] + '.' + message['Content']['HLMAC'][mac])
     elif (message['Type'] == "Load"):
-        return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message["Value"])
+        return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message["Value"])
     elif (message['Type'] == "Share"):
-        return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message['Type'] + ": " + message["Value"])
+        return Text(Point(arrow.getCenter().getX()+desfaseX, arrow.getCenter().getY()+desfaseY), message["Value"])
 
 def show_table(win, num_nodes):
     Rectangle(Point(70, 20), Point(230, 40)).draw(win).setFill("light blue")
@@ -202,12 +203,22 @@ def node_conn(win, data, time, dictionary):
     
 
 def main():
-    tipos_mensaje = ["Hello", "SetHLMAC", "Load", "Share"]
+    message_types = ["Hello", "SetHLMAC", "Load", "Share"]
     win = GraphWin("First Escenary", 1300, 900)
     win.setBackground("white")
     # draw_next(win)
 
-    data = json_file("timers/test_demo_2.json")
+    Rectangle(Point(1100,  40), Point(1120,  60)).draw(win).setFill("red")
+    Rectangle(Point(1100,  80), Point(1120, 100)).draw(win).setFill("green")
+    Rectangle(Point(1100, 120), Point(1120, 140)).draw(win).setFill("blue")
+    Rectangle(Point(1100, 160), Point(1120, 180)).draw(win).setFill("orange")
+
+    Text(Point(1150, 55), "Hello").draw(win)
+    Text(Point(1170, 95), "SetHLMAC").draw(win)
+    Text(Point(1150, 135), "Load").draw(win)
+    Text(Point(1150, 175), "Share").draw(win)
+
+    data = json_file("no_timers/demo_video.json")
     #data = json_file("timers/test_demo_7.json")
     #data = json_file("prueba_demo_4_mesh.json")
 
@@ -237,6 +248,9 @@ def main():
 
     dictionary = {}
     show_table(win, len(data['Node']))
+    
+    convergence_text = Text(Point(100, 60+25*len(data['Node'])), "Convergence time")
+    convergence_time = 0
 
     #for k in range(len(data['Node'])):
     #    if data['Node'][k]['Type'] == "Root":
@@ -298,7 +312,7 @@ def main():
             key = win.getKey()
 
         edge_nodes = []
-        for c in tipos_mensaje:
+        for c in message_types:
             if c == "Hello":
                 for k in range(len(data['Node'])):
                     #breakpoint()
@@ -306,8 +320,7 @@ def main():
                         if data['Node'][k]['MAC'] != data['Node'][k]['Message'][last_message[k]]['Origin'] and data['Node'][k]['Message'][last_message[k]]['Type'] == 'Hello':
                             # breakpoint()
                             arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][last_message[k]]['Origin']]["Circle"], dictionary[data['Node'][k]['MAC']]["Circle"], data['Node'][k]['Message'][last_message[k]]['Type'], 0))
-                            arrow[len(arrow)-1].setWidth(3)
-                            arrow[len(arrow)-1].draw(win)
+                            arrow[len(arrow)-1].draw(win).setWidth(5)
                             arrow_message.append(arrow_text(arrow[len(arrow)-1], data['Node'][k]['Message'][last_message[k]], data['Node'][k]['MAC']))
                             arrow_message[len(arrow)-1].draw(win)
                         elif data['Node'][k]['Message'][last_message[k]]['Type'] == "INFO":
@@ -339,7 +352,7 @@ def main():
                                 sethlmac_done = 0
                                 assigned_nodes.append(data['Node'][k]['MAC'])
                                 arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']]["Circle"], dictionary[data['Node'][k]['MAC']]["Circle"], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
-                                arrow[len(arrow)-1].draw(win)
+                                arrow[len(arrow)-1].draw(win).setWidth(5)
                                 arrow_message.append(arrow_text(arrow[len(arrow)-1], data['Node'][k]['Message'][aux_last_message[k]], data['Node'][k]['MAC']))
                                 arrow_message[len(arrow)-1].draw(win)
                             elif data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "INFO":                                    
@@ -377,9 +390,11 @@ def main():
                                 if not data['Node'][k]['MAC'] in load_nodes_prev and not data['Node'][k]['MAC'] in load_nodes_next and aux_last_message[k]+1 < len(data['Node'][k]['Message']) and data['Node'][k]['MAC'] == data['Node'][k]['Message'][aux_last_message[k]+1]['Origin']:
                                     load_nodes_next.append(data['Node'][k]['MAC'])
                                 arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']]["Circle"], dictionary[data['Node'][k]['MAC']]["Circle"], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
-                                arrow[len(arrow)-1].draw(win)
+                                arrow[len(arrow)-1].draw(win).setWidth(5)
                                 arrow_message.append(arrow_text(arrow[len(arrow)-1], data['Node'][k]['Message'][aux_last_message[k]], data['Node'][k]['MAC']))
                                 arrow_message[len(arrow)-1].draw(win)
+                            elif data['Node'][k]['Message'][aux_last_message[k]]['Type'] == 'Hello' and data['Node'][k]['MAC'] in load_nodes:
+                                aux_last_message[k] += 1
                             elif data['Node'][k]['MAC'] == data['Node'][k]['Message'][aux_last_message[k]]['Origin'] and data['Node'][k]['Message'][aux_last_message[k]]['Type'] == 'Load' and data['Node'][k]['MAC'] in load_nodes:
                                 #table_text[node_index[k]][1].undraw()
                                 dictionary[data['Node'][k]['MAC']]["LOAD"].setText(data['Node'][k]['Message'][aux_last_message[k]]['Value'])
@@ -414,15 +429,17 @@ def main():
                     share_done = 1
                     aux_last_message = last_message.copy()
                     for k in range(len(data['Node'])):
-                        while first_timestamp[k] <= i and aux_last_message[k] < len(data['Node'][k]['Message']) and (data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "Load" or data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "Share" or data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "INFO"):
+                        while first_timestamp[k] <= time and aux_last_message[k] < len(data['Node'][k]['Message']) and (data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "Load" or data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "Share" or data['Node'][k]['Message'][aux_last_message[k]]['Type'] == "INFO"):
                             if data['Node'][k]['MAC'] != data['Node'][k]['Message'][aux_last_message[k]]['Origin'] and data['Node'][k]['Message'][aux_last_message[k]]['Type'] == 'Share' and data['Node'][k]['Message'][aux_last_message[k]]['Origin'] in share_nodes:
                                 share_done = 0
                                 if not data['Node'][k]['MAC'] in share_nodes_prev and not data['Node'][k]['MAC'] in share_nodes_next and aux_last_message[k]+1 < len(data['Node'][k]['Message']) and data['Node'][k]['MAC'] == data['Node'][k]['Message'][aux_last_message[k]+1]['Origin']:
                                     share_nodes_next.append(data['Node'][k]['MAC'])
                                 arrow.append(create_arrow(dictionary[data['Node'][k]['Message'][aux_last_message[k]]['Origin']]["Circle"], dictionary[data['Node'][k]['MAC']]["Circle"], data['Node'][k]['Message'][aux_last_message[k]]['Type'], 1))
-                                arrow[len(arrow)-1].draw(win)
+                                arrow[len(arrow)-1].draw(win).setWidth(5)
                                 arrow_message.append(arrow_text(arrow[len(arrow)-1], data['Node'][k]['Message'][aux_last_message[k]], data['Node'][k]['MAC']))
                                 arrow_message[len(arrow)-1].draw(win)
+                            elif data['Node'][k]['Message'][aux_last_message[k]]['Type'] == 'Hello' and data['Node'][k]['MAC'] in share_nodes:
+                                aux_last_message[k] += 1
                             elif data['Node'][k]['MAC'] == data['Node'][k]['Message'][aux_last_message[k]]['Origin'] and data['Node'][k]['Message'][aux_last_message[k]]['Type'] == 'Share' and data['Node'][k]['MAC'] in share_nodes:
                                 #table_text[node_index[k]][2].undraw()
                                 dictionary[data['Node'][k]['MAC']]["SHARE"].setText(data['Node'][k]['Message'][aux_last_message[k]]['Value'])
@@ -443,14 +460,14 @@ def main():
                     share_nodes_next.clear()
                     if share_done == 0:
                         if convergence_time != 0:
-                            if time == 0:
-                                convergence_text = Text(Point(100, 60+25*len(data['Node'])), "Convergence time: " + str(convergence_time) + "s")
-                                convergence_text.draw(win)
-                            else:
-                                convergence_text.undraw()
-                                convergence_text = Text(Point(100, 60+25*len(data['Node'])), "Convergence time: " + str(convergence_time) + "s")
-                                convergence_text.draw(win)
+                            convergence_text.undraw()
+                            convergence_text = Text(Point(100, 60+25*len(data['Node'])), "Convergence time: " + str(convergence_time) + "s")
+                            convergence_text.draw(win)
                             convergence_time = 0
+                        else:
+                            convergence_text.undraw()
+                            convergence_text = Text(Point(100, 60+25*len(data['Node'])), "Did not converge")
+                            convergence_text.draw(win)
                         key = win.getKey()
                         while key != "n":
                             key = win.getKey()
