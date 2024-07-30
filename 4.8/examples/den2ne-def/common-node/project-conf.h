@@ -64,7 +64,7 @@
 // #endif
 
 #ifndef IOTORII_CONF_NRF52840_LOG
-    #define IOTORII_CONF_NRF52840_LOG 0 //POR DEFECTO USA LOG PARA NRF52840-DK
+    #define IOTORII_CONF_NRF52840_LOG 1 //POR DEFECTO USA LOG PARA NRF52840-DK
 #endif
 
 /*---------------------------------------------------------------------------*/

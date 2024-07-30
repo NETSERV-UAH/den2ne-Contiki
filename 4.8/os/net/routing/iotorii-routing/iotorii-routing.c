@@ -114,16 +114,7 @@ iotorii_set_prefix(uip_ipaddr_t *prefix, uip_ipaddr_t *iid)
   }
 }
 /*---------------------------------------------------------------------------*/
-void
-rpl_dag_root_set_prefix(uip_ipaddr_t *prefix, uip_ipaddr_t *iid)
-{
-  static uint8_t initialized = 0;
 
-  if(!initialized) {
-    set_global_address(prefix, iid);
-    initialized = 1;
-  }
-}
 int
 iotorii_root_start(void)
 {

@@ -17,14 +17,10 @@
 
 /*---------------------------------------------------------------------------*/
 
-#define NO_IPV6 0
-#define IOTORII_UDP 1
-#define IOTORII_ICMP 2
-
 #ifdef IOTORII_CONF_IPV6
 	#define IOTORII_IPV6 IOTORII_CONF_IPV6
 #else
-	#define IOTORII_IPV6 IOTORII_ICMP //To use IPv6 (1) or not (0)
+	#define IOTORII_IPV6 0 //To use IPv6 (1) or not (0)
 #endif
 
 //#if IOTORII_IPV6 == 1 
@@ -78,7 +74,7 @@
 
 /*---------------------------------------------------------------------------*/
 
-#if IOTORII_IPV6 != NO_IPV6
+#if IOTORII_IPV6 == 1
 	#include "net/netstack.h"
 	#include "net/routing/routing.h"
 	#include "net/ipv6/simple-udp.h"
@@ -86,8 +82,6 @@
 	#include "net/ipv6/uip-ds6.h"
 	#include "net/ipv6/uiplib.h"
 	#include "net/ipv6/uip.h"
-
-	#include "net/ipv6/uip-icmp6.h"
 	
 	#define addr_t uip_ipaddr_t
 	#define ADDR_SIZE 16
