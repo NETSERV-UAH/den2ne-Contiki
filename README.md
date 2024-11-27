@@ -3,7 +3,7 @@ Den2ne-Contiki / MuHoW
 
 ## Introducción
 
-En este repositorio se encuentra la implementación del algoritmo utilizando la plataforma Contiki. En el directorio '4.8' se encuentran los proyectos para la versión 4.8 de Contiki. En él existen 2 implementaciones del algoritmo, una utilizando IPv6 (den2ne-ipv6) y otro solamente con las modificaciones sobre el funcionamiento respecto al código original.
+En este repositorio se encuentra la implementación del algoritmo utilizando la plataforma Contiki-ng. En el directorio '4.8' se encuentran los proyectos para la versión 4.8 de Contiki-ng. En él existen 2 implementaciones del algoritmo, una utilizando IPv6 (den2ne-ipv6) y otro solamente con las modificaciones sobre el funcionamiento respecto al código original.
 
 
 ## Instrucciones de uso
